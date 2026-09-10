@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Flood Atom</title>
+  <subtitle>Independent writing.</subtitle>
+  <link href="https://atom.example.com/" rel="alternate" />
+  <id>https://atom.example.com/feed</id>
+  <updated>2026-01-04T12:00:00Z</updated>
+  <entry>
+    <title>Atom entry</title>
+    <link href="/entries/one" rel="alternate" />
+    <id>tag:atom.example.com,2026:one</id>
+    <published>2026-01-03T10:00:00Z</published>
+    <updated>2026-01-04T11:00:00Z</updated>
+    <author><name>River Writer</name></author>
+    <summary type="html"><![CDATA[<p>Atom summary.</p>]]></summary>
+    <content type="html"><![CDATA[<p>Atom content.</p>]]></content>
+  </entry>
+</feed>
