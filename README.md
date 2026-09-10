@@ -65,6 +65,8 @@ The Android release manifest includes network access for feed refreshes.
   single oversized response chunk.
 - Missing dates are valid and sort by fetch time. Repeated GUIDs in one feed
   resolve to the final occurrence.
+- Entries absent from a successful refresh are retained and labeled “Removed
+  from feed”; a failed or `304 Not Modified` refresh never applies that label.
 
 ## Flutter Resources
 

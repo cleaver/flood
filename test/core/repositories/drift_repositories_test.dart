@@ -240,6 +240,69 @@ void main() {
       expect(timeline.single.article.contentHtml, '<p>New</p>');
     },
   );
+
+  test(
+    'marks missing entries removed, then clears it when they return',
+    () async {
+      source.results
+        ..add(_loaded(title: 'Journal', etag: '"v1"'))
+        ..add(_loaded(title: 'Journal', etag: '"v2"', articles: []))
+        ..add(_loaded(title: 'Journal', etag: '"v3"', content: 'Returned'));
+      final feed = await feeds.subscribe(Uri.parse('https://example.com/feed'));
+      final initial =
+          (await articles.watchArticles(const ArticleQuery()).first).single;
+      await articles.markRead(initial.article.id, isRead: true);
+      await articles.setStarred(initial.article.id, isStarred: true);
+      await articles.saveScrollOffset(initial.article.id, 42);
+
+      final removedRefresh = await feeds.refresh(feed.id);
+      final removed = await articles.watchArticle(initial.article.id).first;
+
+      expect(removedRefresh, isA<FeedRefreshSuccess>());
+      expect(removed!.article.isRemoved, isTrue);
+      expect(removed.state.isRead, isTrue);
+      expect(removed.state.isStarred, isTrue);
+      expect(removed.state.scrollOffset, 42);
+
+      final returnedRefresh = await feeds.refresh(feed.id);
+      final returned = await articles.watchArticle(initial.article.id).first;
+
+      expect(returnedRefresh, isA<FeedRefreshSuccess>());
+      expect(returned!.article.isRemoved, isFalse);
+      expect(returned.article.contentHtml, 'Returned');
+      expect(returned.state.isRead, isTrue);
+      expect(returned.state.isStarred, isTrue);
+      expect(returned.state.scrollOffset, 42);
+    },
+  );
+
+  test(
+    'does not mark entries removed after a failed or unchanged refresh',
+    () async {
+      source.results
+        ..add(_loaded(title: 'Journal', etag: '"v1"'))
+        ..add(const FeedUnchanged(etag: '"v1"', lastModified: 'today'));
+      final feed = await feeds.subscribe(Uri.parse('https://example.com/feed'));
+      final articleId =
+          (await articles.watchArticles(const ArticleQuery()).first)
+              .single
+              .article
+              .id;
+
+      source.errors.add(StateError('offline'));
+      expect(await feeds.refresh(feed.id), isA<FeedRefreshFailure>());
+      expect(
+        (await articles.watchArticle(articleId).first)!.article.isRemoved,
+        isFalse,
+      );
+
+      expect(await feeds.refresh(feed.id), isA<FeedRefreshSuccess>());
+      expect(
+        (await articles.watchArticle(articleId).first)!.article.isRemoved,
+        isFalse,
+      );
+    },
+  );
 }
 
 FeedLoaded _loaded({

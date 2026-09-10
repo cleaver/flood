@@ -86,6 +86,24 @@ class ArticlePage extends StatelessWidget {
                   ),
                 ),
                 const Divider(height: 32),
+                if (article.isRemoved)
+                  Card(
+                    child: ListTile(
+                      leading: Tooltip(
+                        message: 'Removed from feed',
+                        child: Icon(
+                          Icons.remove_circle_outline,
+                          semanticLabel: 'Removed from feed',
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                      title: const Text('Removed from feed'),
+                      subtitle: const Text(
+                        'This entry is no longer published by this feed.',
+                      ),
+                    ),
+                  ),
+                if (article.isRemoved) const SizedBox(height: 16),
                 if (content == null || content.trim().isEmpty)
                   const Text('This feed did not include article content.')
                 else

@@ -181,12 +181,29 @@ class _ArticleTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       onTap: onTap,
-      leading: Icon(
-        item.state.isRead ? Icons.circle_outlined : Icons.circle,
-        size: 12,
-        color: item.state.isRead
-            ? Theme.of(context).colorScheme.outline
-            : Theme.of(context).colorScheme.primary,
+      leading: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            item.state.isRead ? Icons.circle_outlined : Icons.circle,
+            size: 12,
+            color: item.state.isRead
+                ? Theme.of(context).colorScheme.outline
+                : Theme.of(context).colorScheme.primary,
+          ),
+          if (item.article.isRemoved) ...[
+            const SizedBox(width: 8),
+            Tooltip(
+              message: 'Removed from feed',
+              child: Icon(
+                Icons.remove_circle_outline,
+                semanticLabel: 'Removed from feed',
+                size: 18,
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          ],
+        ],
       ),
       title: Text(
         item.article.title.isEmpty ? 'Untitled article' : item.article.title,

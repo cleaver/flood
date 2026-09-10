@@ -53,6 +53,18 @@
   counts should first collapse duplicated source keys.
 - The existing response-size check runs after buffering a chunk. It should
   reject a chunk that would exceed the limit before retaining it.
+- A successful `FeedLoaded` refresh is the only safe point to compare the
+  upstream set with local rows; timeout, HTTP, and parse failures must leave
+  removal flags unchanged.
+- The current article state table is separate from publisher fields, so a
+  removed flag can be added without changing read/starred/scroll semantics.
+- Timeline rows already have a leading status icon and the reader has an AppBar
+  action area; these are the smallest accessible places to explain removal.
+- A boolean `isRemoved` on `ArticleRows` fits the ownership boundary: it can be
+  updated during refresh while `ArticleStateRows` remains untouched.
+- The migration must default existing rows to `false`; only a successful
+  `FeedLoaded` response can mark absent rows as removed, while `304` and failed
+  requests leave the previous marker unchanged.
 
 ## Technical Decisions
 

@@ -2,6 +2,61 @@
 
 ## Session: 2026-09-09
 
+### Session: 2026-09-10
+
+### Phase 14: Persist removal state
+
+- **Status:** complete
+- Actions taken:
+  - Added the `articles.is_removed` column and Drift schema-version-2
+    migration.
+  - Marked feed entries absent from successful refreshes while retaining rows.
+  - Cleared the marker when entries returned and preserved all reader state.
+- Files created/modified:
+  - `lib/core/database/flood_database.dart`
+  - `lib/core/database/flood_database.g.dart`
+  - `lib/core/models/article.dart`
+  - `lib/core/repositories/drift_article_repository.dart`
+  - `lib/core/repositories/drift_feed_repository.dart`
+  - `test/core/repositories/drift_repositories_test.dart`
+
+### Phase 15: Explain removal in the UI
+
+- **Status:** complete
+- Actions taken:
+  - Added a removed-entry icon and tooltip to timeline rows.
+  - Added a reader card explaining that the entry is no longer published.
+  - Extended the end-to-end widget flow through refresh, timeline, and reader.
+- Files created/modified:
+  - `lib/features/timeline/presentation/timeline_page.dart`
+  - `lib/features/article/presentation/article_page.dart`
+  - `test/widget_test.dart`
+
+### Phase 16: Verify and document
+
+- **Status:** complete
+- Actions taken:
+  - Updated the README and data-model docs with removal semantics.
+  - Focused verification passed: analyzer clean and 11 targeted tests passed.
+  - Full-suite verification passed: analyzer clean and 34 tests passed.
+- Files created/modified:
+  - `README.md`
+  - `docs/data-model.md`
+
+### Phase 13: Removed-entry history
+
+- **Status:** complete
+- Actions taken:
+  - Committed the previous Flood implementation as `f315af3`.
+  - Started the removed-entry history slice in the same repository.
+  - Defined missing entries as retained-but-marked only after a successful
+    complete feed response.
+  - Confirmed the marker belongs on publisher data and must not overwrite
+    reader state.
+- Files created/modified:
+  - `task_plan.md`
+  - `findings.md`
+
 ### Phase 10: Ingestion resilience inventory
 
 - **Status:** complete
@@ -168,6 +223,7 @@
 | Full verification | Analyzer and all unit/repository/widget tests | No analyzer issues; 20 tests passed | ✓ |
 | Multi-feed verification | Analyzer and repository/widget integration tests | No analyzer issues; 23 tests passed | ✓ |
 | Resilience verification | Analyzer and complete test suite | No analyzer issues; 32 tests passed | ✓ |
+| Removed-entry verification | Analyzer and complete test suite | No analyzer issues; 34 tests passed | ✓ |
 
 ## Error Log
 
@@ -193,6 +249,7 @@
 | 2026-09-09 | Final status check assumed Git metadata existed | 1 | Reviewed files directly; the project directory is not a Git repository |
 | 2026-09-09 | Feed URL normalization emitted a trailing `#` | 1 | Use a null fragment when rebuilding the URI |
 | 2026-09-09 | Redirect source URI remained at the original request URL | 1 | Use `BaseResponseWithUrl` for the final redirect destination |
+| 2026-09-10 | Removed-entry widget test looked for `Today` as a navigation label | 1 | Use the shell's `Timeline` destination label |
 
 ## 5-Question Reboot Check
 

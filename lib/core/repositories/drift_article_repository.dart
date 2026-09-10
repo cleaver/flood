@@ -117,6 +117,7 @@ class DriftArticleRepository implements ArticleRepository {
         contentHtml: article.contentHtml,
         publishedAt: article.publishedAt,
         updatedAt: article.updatedAt,
+        isRemoved: article.isRemoved,
       ),
       state: ArticleState(
         articleId: article.id,

@@ -35,6 +35,7 @@ class ArticleRows extends Table {
   DateTimeColumn get publishedAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
   DateTimeColumn get fetchedAt => dateTime()();
+  BoolColumn get isRemoved => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -62,13 +63,18 @@ class FloodDatabase extends _$FloodDatabase {
     : super(executor ?? driftDatabase(name: 'flood'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
       await _createIndexes();
+    },
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.addColumn(articleRows, articleRows.isRemoved);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

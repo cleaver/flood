@@ -1,14 +1,13 @@
-# Task Plan: Ingestion resilience coverage
+# Task Plan: Removed-entry history
 
 ## Goal
 
-Prove Flood behaves predictably when starting offline and ingesting hostile or
-unusual feeds: timeouts, redirects, malformed XML, missing dates, duplicate
-GUIDs, and oversized responses.
+Keep locally stored entries when an upstream feed stops publishing them, mark
+them as removed, and make that state clear in both the timeline and reader.
 
 ## Current Phase
 
-Complete
+Phase 15
 
 ## Phases
 
@@ -83,6 +82,30 @@ Complete
 - [x] Document the resilience guarantees and limits
 - **Status:** complete
 
+### Phase 13: Define removed-entry semantics
+- [x] Inspect refresh, article models, database, and reader UI
+- [x] Choose refresh-safe removal detection and display semantics
+- [x] Record findings
+- **Status:** complete
+
+### Phase 14: Persist removal state
+- [x] Add the removed marker and migration
+- [x] Mark missing entries during successful refreshes
+- [x] Clear the marker when an entry returns
+- [x] Preserve read/starred/scroll state
+- **Status:** complete
+
+### Phase 15: Explain removal in the UI
+- [x] Show a removed icon and tooltip in timeline entries
+- [x] Show an explanatory label in the article reader
+- [x] Add widget/repository coverage
+- **Status:** complete
+
+### Phase 16: Verify and document
+- [x] Format, analyze, and run the full test suite
+- [x] Update the data-model and README documentation
+- **Status:** complete
+
 ## Key Questions
 
 1. Which SQLite layer fits Flutter 3.47.3 and keeps storage details behind the repository contracts?
@@ -111,6 +134,10 @@ Complete
 | Apply one timeout to the entire HTTP transaction | Headers arriving quickly must not let a stalled body bypass the deadline |
 | Reject oversized chunks before buffering them | A hostile single chunk must not transiently exceed the configured memory budget |
 | Keep the final duplicate GUID occurrence | Feeds commonly republish an item as a later revision within the same document |
+| Retain absent entries and mark them only after a successful complete refresh | A transient feed failure must not masquerade as publisher removal |
+| Clear the marker when an entry returns | Republishing an old entry should make it active again without losing reader state |
+| Store removal on the publisher-owned article row, not article state | Removed is feed truth; read/starred/scroll remain reader truth |
+| Add the field with a default-false migration | Existing databases remain active and all preexisting entries stay published until a successful refresh observes otherwise |
 
 ## Errors Encountered
 
@@ -136,6 +163,7 @@ Complete
 | Final status check assumed the project had Git metadata | 1 | Reviewed the relevant files directly; this directory is not a Git repository |
 | Feed URL normalization emitted a trailing `#` for fragment-free URLs | 1 | Used a null fragment when rebuilding the URI |
 | Redirect test exposed that `response.request.url` stays at the original URL | 1 | Read the final URL from `BaseResponseWithUrl` when the client provides it |
+| Removed-entry widget test tapped the AppBar title instead of the shell tab | 1 | Tap the `Timeline` navigation destination |
 
 ## Notes
 

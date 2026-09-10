@@ -134,7 +134,9 @@ class DriftFeedRepository implements FeedRepository {
           parsedFeed: loaded.feed,
           fallbackUrl: normalizedUrl,
         );
-        await _upsertArticles(id, loaded.feed.articles, finishedAt);
+        final uniqueArticles = _uniqueArticles(loaded.feed.articles).toList();
+        await _markMissingArticles(id, uniqueArticles);
+        await _upsertArticles(id, uniqueArticles, finishedAt);
       });
       return (await getFeed(id))!;
     } catch (error) {
@@ -172,13 +174,14 @@ class DriftFeedRepository implements FeedRepository {
       }
 
       final fresh = loaded as FeedLoaded;
+      final uniqueArticles = _uniqueArticles(fresh.feed.articles).toList();
       final existingIds =
           await (_database.selectOnly(_database.articleRows)
                 ..addColumns([_database.articleRows.id])
                 ..where(_database.articleRows.feedId.equals(id)))
               .map((row) => row.read(_database.articleRows.id)!)
               .get();
-      final newCount = _uniqueArticles(fresh.feed.articles)
+      final newCount = uniqueArticles
           .where(
             (article) => !existingIds.contains(stableId(id, article.sourceKey)),
           )
@@ -191,7 +194,8 @@ class DriftFeedRepository implements FeedRepository {
           finishedAt,
           parsedFeed: fresh.feed,
         );
-        await _upsertArticles(id, fresh.feed.articles, finishedAt);
+        await _markMissingArticles(id, uniqueArticles);
+        await _upsertArticles(id, uniqueArticles, finishedAt);
       });
       return FeedRefreshSuccess(
         feedId: id,
@@ -298,6 +302,7 @@ class DriftFeedRepository implements FeedRepository {
               publishedAt: Value(article.publishedAt),
               updatedAt: Value(article.updatedAt),
               fetchedAt: fetchedAt,
+              isRemoved: const Value(false),
             ),
           );
     }
@@ -309,6 +314,26 @@ class DriftFeedRepository implements FeedRepository {
       bySourceKey[article.sourceKey] = article;
     }
     return bySourceKey.values;
+  }
+
+  Future<void> _markMissingArticles(
+    String feedId,
+    List<ParsedArticle> currentArticles,
+  ) async {
+    final currentIds = currentArticles
+        .map((article) => stableId(feedId, article.sourceKey))
+        .toList(growable: false);
+    if (currentIds.isEmpty) {
+      await (_database.update(_database.articleRows)
+            ..where((article) => article.feedId.equals(feedId)))
+          .write(const ArticleRowsCompanion(isRemoved: Value(true)));
+      return;
+    }
+    await (_database.update(_database.articleRows)..where(
+          (article) =>
+              article.feedId.equals(feedId) & article.id.isNotIn(currentIds),
+        ))
+        .write(const ArticleRowsCompanion(isRemoved: Value(true)));
   }
 
   Feed _feedFromRecord(FeedRecord record) => Feed(

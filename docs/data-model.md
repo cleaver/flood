@@ -1,14 +1,18 @@
 # Flood data model
 
-The version-one schema is defined in [schema-v1.sql](schema-v1.sql). Timestamps
-are stored as UTC Unix milliseconds. URLs are stored as normalized strings.
+The version-one baseline schema is defined in [schema-v1.sql](schema-v1.sql).
+The current Drift schema is version two; it adds `articles.is_removed` with a
+default of `false`. Timestamps are stored as UTC Unix milliseconds. URLs are
+stored as normalized strings.
 
 ## Ownership
 
 - `feeds` stores subscriptions and conditional-request metadata (`etag` and
   `last_modified`). A feed also owns its latest refresh status.
 - `articles` stores publisher-controlled data. `source_key` is the feed GUID,
-  canonical URL, or a deterministic fallback hash, in that order.
+  canonical URL, or a deterministic fallback hash, in that order. `is_removed`
+  records that a successful refresh no longer found the entry upstream; it is
+  intentionally retained for history.
 - `article_states` stores reader-controlled data separately, so refreshing an
   article can never overwrite read, starred, or scroll state. Reader actions
   synchronize across same-URL copies from different feeds.

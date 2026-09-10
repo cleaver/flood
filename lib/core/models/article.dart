@@ -11,6 +11,7 @@ class Article {
     this.contentHtml,
     this.publishedAt,
     this.updatedAt,
+    this.isRemoved = false,
   });
 
   final String id;
@@ -27,6 +28,7 @@ class Article {
   final String? contentHtml;
   final DateTime? publishedAt;
   final DateTime? updatedAt;
+  final bool isRemoved;
 
   DateTime get sortDate => publishedAt ?? updatedAt ?? fetchedAt;
 }

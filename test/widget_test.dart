@@ -58,33 +58,56 @@ void main() {
     final stored = await database.select(database.articleStateRows).getSingle();
     expect(stored.readAt, isNotNull);
     expect(stored.isStarred, isTrue);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Subscriptions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Refresh Flood Journal'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Timeline'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Removed from feed'), findsOneWidget);
+
+    await tester.tap(find.text('First article'));
+    await tester.pumpAndSettle();
+    expect(find.text('Removed from feed'), findsOneWidget);
+    expect(
+      find.text('This entry is no longer published by this feed.'),
+      findsOneWidget,
+    );
     await database.close();
   });
 }
 
 class _FixtureSource implements FeedSource {
+  int _loads = 0;
+
   @override
   Future<FeedLoadResult> load(
     Uri uri, {
     String? etag,
     String? lastModified,
   }) async {
+    _loads++;
     return FeedLoaded(
       etag: '"fixture-v1"',
       lastModified: 'Wed, 09 Sep 2026 12:00:00 GMT',
       feed: ParsedFeed(
         title: 'Flood Journal',
         siteUrl: Uri.parse('https://example.com/'),
-        articles: [
-          ParsedArticle(
-            sourceKey: 'article-1',
-            title: 'First article',
-            author: 'River Writer',
-            url: Uri.parse('https://example.com/articles/one'),
-            contentHtml: '<p>Readable content.</p>',
-            publishedAt: DateTime.utc(2026, 9, 8, 10),
-          ),
-        ],
+        articles: _loads == 1
+            ? [
+                ParsedArticle(
+                  sourceKey: 'article-1',
+                  title: 'First article',
+                  author: 'River Writer',
+                  url: Uri.parse('https://example.com/articles/one'),
+                  contentHtml: '<p>Readable content.</p>',
+                  publishedAt: DateTime.utc(2026, 9, 8, 10),
+                ),
+              ]
+            : const [],
       ),
     );
   }

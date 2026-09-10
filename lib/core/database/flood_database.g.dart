@@ -874,6 +874,21 @@ class $ArticleRowsTable extends ArticleRows
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _isRemovedMeta = const VerificationMeta(
+    'isRemoved',
+  );
+  @override
+  late final GeneratedColumn<bool> isRemoved = GeneratedColumn<bool>(
+    'is_removed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_removed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -887,6 +902,7 @@ class $ArticleRowsTable extends ArticleRows
     publishedAt,
     updatedAt,
     fetchedAt,
+    isRemoved,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -982,6 +998,12 @@ class $ArticleRowsTable extends ArticleRows
     } else if (isInserting) {
       context.missing(_fetchedAtMeta);
     }
+    if (data.containsKey('is_removed')) {
+      context.handle(
+        _isRemovedMeta,
+        isRemoved.isAcceptableOrUnknown(data['is_removed']!, _isRemovedMeta),
+      );
+    }
     return context;
   }
 
@@ -1039,6 +1061,10 @@ class $ArticleRowsTable extends ArticleRows
         DriftSqlType.dateTime,
         data['${effectivePrefix}fetched_at'],
       )!,
+      isRemoved: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_removed'],
+      )!,
     );
   }
 
@@ -1060,6 +1086,7 @@ class ArticleRecord extends DataClass implements Insertable<ArticleRecord> {
   final DateTime? publishedAt;
   final DateTime? updatedAt;
   final DateTime fetchedAt;
+  final bool isRemoved;
   const ArticleRecord({
     required this.id,
     required this.feedId,
@@ -1072,6 +1099,7 @@ class ArticleRecord extends DataClass implements Insertable<ArticleRecord> {
     this.publishedAt,
     this.updatedAt,
     required this.fetchedAt,
+    required this.isRemoved,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1099,6 +1127,7 @@ class ArticleRecord extends DataClass implements Insertable<ArticleRecord> {
       map['updated_at'] = Variable<DateTime>(updatedAt);
     }
     map['fetched_at'] = Variable<DateTime>(fetchedAt);
+    map['is_removed'] = Variable<bool>(isRemoved);
     return map;
   }
 
@@ -1125,6 +1154,7 @@ class ArticleRecord extends DataClass implements Insertable<ArticleRecord> {
           ? const Value.absent()
           : Value(updatedAt),
       fetchedAt: Value(fetchedAt),
+      isRemoved: Value(isRemoved),
     );
   }
 
@@ -1145,6 +1175,7 @@ class ArticleRecord extends DataClass implements Insertable<ArticleRecord> {
       publishedAt: serializer.fromJson<DateTime?>(json['publishedAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
       fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
+      isRemoved: serializer.fromJson<bool>(json['isRemoved']),
     );
   }
   @override
@@ -1162,6 +1193,7 @@ class ArticleRecord extends DataClass implements Insertable<ArticleRecord> {
       'publishedAt': serializer.toJson<DateTime?>(publishedAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
       'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
+      'isRemoved': serializer.toJson<bool>(isRemoved),
     };
   }
 
@@ -1177,6 +1209,7 @@ class ArticleRecord extends DataClass implements Insertable<ArticleRecord> {
     Value<DateTime?> publishedAt = const Value.absent(),
     Value<DateTime?> updatedAt = const Value.absent(),
     DateTime? fetchedAt,
+    bool? isRemoved,
   }) => ArticleRecord(
     id: id ?? this.id,
     feedId: feedId ?? this.feedId,
@@ -1189,6 +1222,7 @@ class ArticleRecord extends DataClass implements Insertable<ArticleRecord> {
     publishedAt: publishedAt.present ? publishedAt.value : this.publishedAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     fetchedAt: fetchedAt ?? this.fetchedAt,
+    isRemoved: isRemoved ?? this.isRemoved,
   );
   ArticleRecord copyWithCompanion(ArticleRowsCompanion data) {
     return ArticleRecord(
@@ -1209,6 +1243,7 @@ class ArticleRecord extends DataClass implements Insertable<ArticleRecord> {
           : this.publishedAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       fetchedAt: data.fetchedAt.present ? data.fetchedAt.value : this.fetchedAt,
+      isRemoved: data.isRemoved.present ? data.isRemoved.value : this.isRemoved,
     );
   }
 
@@ -1225,7 +1260,8 @@ class ArticleRecord extends DataClass implements Insertable<ArticleRecord> {
           ..write('contentHtml: $contentHtml, ')
           ..write('publishedAt: $publishedAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('fetchedAt: $fetchedAt')
+          ..write('fetchedAt: $fetchedAt, ')
+          ..write('isRemoved: $isRemoved')
           ..write(')'))
         .toString();
   }
@@ -1243,6 +1279,7 @@ class ArticleRecord extends DataClass implements Insertable<ArticleRecord> {
     publishedAt,
     updatedAt,
     fetchedAt,
+    isRemoved,
   );
   @override
   bool operator ==(Object other) =>
@@ -1258,7 +1295,8 @@ class ArticleRecord extends DataClass implements Insertable<ArticleRecord> {
           other.contentHtml == this.contentHtml &&
           other.publishedAt == this.publishedAt &&
           other.updatedAt == this.updatedAt &&
-          other.fetchedAt == this.fetchedAt);
+          other.fetchedAt == this.fetchedAt &&
+          other.isRemoved == this.isRemoved);
 }
 
 class ArticleRowsCompanion extends UpdateCompanion<ArticleRecord> {
@@ -1273,6 +1311,7 @@ class ArticleRowsCompanion extends UpdateCompanion<ArticleRecord> {
   final Value<DateTime?> publishedAt;
   final Value<DateTime?> updatedAt;
   final Value<DateTime> fetchedAt;
+  final Value<bool> isRemoved;
   final Value<int> rowid;
   const ArticleRowsCompanion({
     this.id = const Value.absent(),
@@ -1286,6 +1325,7 @@ class ArticleRowsCompanion extends UpdateCompanion<ArticleRecord> {
     this.publishedAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.fetchedAt = const Value.absent(),
+    this.isRemoved = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ArticleRowsCompanion.insert({
@@ -1300,6 +1340,7 @@ class ArticleRowsCompanion extends UpdateCompanion<ArticleRecord> {
     this.publishedAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     required DateTime fetchedAt,
+    this.isRemoved = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        feedId = Value(feedId),
@@ -1318,6 +1359,7 @@ class ArticleRowsCompanion extends UpdateCompanion<ArticleRecord> {
     Expression<DateTime>? publishedAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? fetchedAt,
+    Expression<bool>? isRemoved,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1332,6 +1374,7 @@ class ArticleRowsCompanion extends UpdateCompanion<ArticleRecord> {
       if (publishedAt != null) 'published_at': publishedAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (fetchedAt != null) 'fetched_at': fetchedAt,
+      if (isRemoved != null) 'is_removed': isRemoved,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1348,6 +1391,7 @@ class ArticleRowsCompanion extends UpdateCompanion<ArticleRecord> {
     Value<DateTime?>? publishedAt,
     Value<DateTime?>? updatedAt,
     Value<DateTime>? fetchedAt,
+    Value<bool>? isRemoved,
     Value<int>? rowid,
   }) {
     return ArticleRowsCompanion(
@@ -1362,6 +1406,7 @@ class ArticleRowsCompanion extends UpdateCompanion<ArticleRecord> {
       publishedAt: publishedAt ?? this.publishedAt,
       updatedAt: updatedAt ?? this.updatedAt,
       fetchedAt: fetchedAt ?? this.fetchedAt,
+      isRemoved: isRemoved ?? this.isRemoved,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1402,6 +1447,9 @@ class ArticleRowsCompanion extends UpdateCompanion<ArticleRecord> {
     if (fetchedAt.present) {
       map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
     }
+    if (isRemoved.present) {
+      map['is_removed'] = Variable<bool>(isRemoved.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1422,6 +1470,7 @@ class ArticleRowsCompanion extends UpdateCompanion<ArticleRecord> {
           ..write('publishedAt: $publishedAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('fetchedAt: $fetchedAt, ')
+          ..write('isRemoved: $isRemoved, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2228,6 +2277,7 @@ typedef $$ArticleRowsTableCreateCompanionBuilder =
       Value<DateTime?> publishedAt,
       Value<DateTime?> updatedAt,
       required DateTime fetchedAt,
+      Value<bool> isRemoved,
       Value<int> rowid,
     });
 typedef $$ArticleRowsTableUpdateCompanionBuilder =
@@ -2243,6 +2293,7 @@ typedef $$ArticleRowsTableUpdateCompanionBuilder =
       Value<DateTime?> publishedAt,
       Value<DateTime?> updatedAt,
       Value<DateTime> fetchedAt,
+      Value<bool> isRemoved,
       Value<int> rowid,
     });
 
@@ -2345,6 +2396,11 @@ class $$ArticleRowsTableFilterComposer
 
   ColumnFilters<DateTime> get fetchedAt => $composableBuilder(
     column: $table.fetchedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isRemoved => $composableBuilder(
+    column: $table.isRemoved,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2456,6 +2512,11 @@ class $$ArticleRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isRemoved => $composableBuilder(
+    column: $table.isRemoved,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$FeedRowsTableOrderingComposer get feedId {
     final $$FeedRowsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2524,6 +2585,9 @@ class $$ArticleRowsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get fetchedAt =>
       $composableBuilder(column: $table.fetchedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isRemoved =>
+      $composableBuilder(column: $table.isRemoved, builder: (column) => column);
 
   $$FeedRowsTableAnnotationComposer get feedId {
     final $$FeedRowsTableAnnotationComposer composer = $composerBuilder(
@@ -2613,6 +2677,7 @@ class $$ArticleRowsTableTableManager
                 Value<DateTime?> publishedAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<DateTime> fetchedAt = const Value.absent(),
+                Value<bool> isRemoved = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ArticleRowsCompanion(
                 id: id,
@@ -2626,6 +2691,7 @@ class $$ArticleRowsTableTableManager
                 publishedAt: publishedAt,
                 updatedAt: updatedAt,
                 fetchedAt: fetchedAt,
+                isRemoved: isRemoved,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2641,6 +2707,7 @@ class $$ArticleRowsTableTableManager
                 Value<DateTime?> publishedAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 required DateTime fetchedAt,
+                Value<bool> isRemoved = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ArticleRowsCompanion.insert(
                 id: id,
@@ -2654,6 +2721,7 @@ class $$ArticleRowsTableTableManager
                 publishedAt: publishedAt,
                 updatedAt: updatedAt,
                 fetchedAt: fetchedAt,
+                isRemoved: isRemoved,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
