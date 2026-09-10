@@ -38,4 +38,19 @@ void main() {
       Uri.parse('https://example.com/posts/first'),
     );
   });
+
+  test('does not turn invalid XML into a loaded feed', () async {
+    final client = MockClient((request) async {
+      return http.Response('<rss><channel>', 200, request: request);
+    });
+    final loader = FeedLoader(
+      fetcher: FeedDocumentFetcher(client),
+      parser: const FeedDocumentParser(),
+    );
+
+    expect(
+      loader.load(Uri.parse('https://example.com/feed.xml')),
+      throwsA(isA<FeedParseException>()),
+    );
+  });
 }

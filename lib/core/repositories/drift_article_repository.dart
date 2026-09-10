@@ -6,6 +6,7 @@ import 'package:flood/core/models/article_query.dart';
 import 'package:flood/core/models/article_state.dart';
 import 'package:flood/core/models/article_with_state.dart';
 import 'package:flood/core/repositories/article_repository.dart';
+import 'package:flood/core/utils/article_deduplication_key.dart';
 
 class DriftArticleRepository implements ArticleRepository {
   DriftArticleRepository(this._database, {DateTime Function()? now})
@@ -35,7 +36,7 @@ class DriftArticleRepository implements ArticleRepository {
           (left, right) =>
               right.article.sortDate.compareTo(left.article.sortDate),
         );
-      return articles.take(filter.limit).toList(growable: false);
+      return _deduplicate(articles).take(filter.limit).toList(growable: false);
     });
   }
 
@@ -49,20 +50,27 @@ class DriftArticleRepository implements ArticleRepository {
 
   @override
   Future<void> markRead(String id, {required bool isRead}) async {
-    await _ensureState(id);
-    await (_database.update(
-      _database.articleStateRows,
-    )..where((state) => state.articleId.equals(id))).write(
-      ArticleStateRowsCompanion(readAt: Value(isRead ? _now().toUtc() : null)),
-    );
+    final readAt = isRead ? _now().toUtc() : null;
+    await _database.transaction(() async {
+      for (final matchingId in await _matchingArticleIds(id)) {
+        await _ensureState(matchingId);
+        await (_database.update(_database.articleStateRows)
+              ..where((state) => state.articleId.equals(matchingId)))
+            .write(ArticleStateRowsCompanion(readAt: Value(readAt)));
+      }
+    });
   }
 
   @override
   Future<void> setStarred(String id, {required bool isStarred}) async {
-    await _ensureState(id);
-    await (_database.update(_database.articleStateRows)
-          ..where((state) => state.articleId.equals(id)))
-        .write(ArticleStateRowsCompanion(isStarred: Value(isStarred)));
+    await _database.transaction(() async {
+      for (final matchingId in await _matchingArticleIds(id)) {
+        await _ensureState(matchingId);
+        await (_database.update(_database.articleStateRows)
+              ..where((state) => state.articleId.equals(matchingId)))
+            .write(ArticleStateRowsCompanion(isStarred: Value(isStarred)));
+      }
+    });
   }
 
   @override
@@ -121,6 +129,54 @@ class DriftArticleRepository implements ArticleRepository {
 
   Uri? _optionalUri(String? value) =>
       value == null || value.isEmpty ? null : Uri.tryParse(value);
+
+  List<ArticleWithState> _deduplicate(List<ArticleWithState> articles) {
+    final unique = <String, ArticleWithState>{};
+    for (final candidate in articles) {
+      final key = articleDeduplicationKey(candidate.article);
+      final current = unique[key];
+      if (current == null || _isPreferred(candidate, current)) {
+        unique[key] = candidate;
+      }
+    }
+    final deduplicated = unique.values.toList()
+      ..sort(
+        (left, right) =>
+            right.article.sortDate.compareTo(left.article.sortDate),
+      );
+    return deduplicated;
+  }
+
+  bool _isPreferred(ArticleWithState candidate, ArticleWithState current) {
+    final candidateScore =
+        (candidate.state.isRead ? 0 : 2) + (candidate.state.isStarred ? 1 : 0);
+    final currentScore =
+        (current.state.isRead ? 0 : 2) + (current.state.isStarred ? 1 : 0);
+    if (candidateScore != currentScore) return candidateScore > currentScore;
+    return candidate.article.sortDate.isAfter(current.article.sortDate);
+  }
+
+  Future<List<String>> _matchingArticleIds(String id) async {
+    final target = await (_database.select(
+      _database.articleRows,
+    )..where((article) => article.id.equals(id))).getSingle();
+    final key = articleDeduplicationKeyForValues(
+      id: target.id,
+      url: _optionalUri(target.url),
+    );
+    final allArticles = await _database.select(_database.articleRows).get();
+    return allArticles
+        .where(
+          (article) =>
+              articleDeduplicationKeyForValues(
+                id: article.id,
+                url: _optionalUri(article.url),
+              ) ==
+              key,
+        )
+        .map((article) => article.id)
+        .toList(growable: false);
+  }
 
   Future<void> _ensureState(String id) async {
     await _database

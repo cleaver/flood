@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -72,19 +73,39 @@ class FeedDocumentFetcher {
       request.headers['if-modified-since'] = lastModified;
     }
 
-    late http.StreamedResponse response;
     try {
-      response = await _client.send(request).timeout(timeout);
+      return await _download(
+        request,
+        fallbackUri: uri,
+        etag: etag,
+        lastModified: lastModified,
+      ).timeout(timeout);
+    } on TimeoutException {
+      throw FeedFetchException(
+        'Feed download timed out after ${timeout.inMilliseconds} ms.',
+      );
     } on FeedFetchException {
       rethrow;
     } catch (error) {
       throw FeedFetchException('Could not download the feed: $error');
     }
+  }
+
+  Future<FeedFetchResult> _download(
+    http.BaseRequest request, {
+    required Uri fallbackUri,
+    required String? etag,
+    required String? lastModified,
+  }) async {
+    final response = await _client.send(request);
 
     final responseEtag = response.headers['etag'] ?? etag;
     final responseLastModified =
         response.headers['last-modified'] ?? lastModified;
-    final sourceUri = response.request?.url ?? uri;
+    final sourceUri = switch (response) {
+      http.BaseResponseWithUrl(:final url) => url,
+      _ => response.request?.url ?? fallbackUri,
+    };
 
     if (response.statusCode == 304) {
       return FeedDocumentNotModified(
@@ -102,12 +123,12 @@ class FeedDocumentFetcher {
 
     final bytes = BytesBuilder(copy: false);
     await for (final chunk in response.stream) {
-      bytes.add(chunk);
-      if (bytes.length > maximumBytes) {
+      if (chunk.length > maximumBytes - bytes.length) {
         throw FeedFetchException(
           'Feed is larger than the $maximumBytes byte download limit.',
         );
       }
+      bytes.add(chunk);
     }
 
     return FeedDocumentFetched(

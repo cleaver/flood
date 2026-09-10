@@ -2,6 +2,101 @@
 
 ## Session: 2026-09-09
 
+### Phase 10: Ingestion resilience inventory
+
+- **Status:** complete
+- Actions taken:
+  - Started the resilience coverage slice for offline startup and adverse feed
+    inputs.
+  - Identified two hardening gaps: the timeout did not cover response bodies,
+    and oversize chunks were buffered before rejection.
+  - Defined offline startup as serving persisted SQLite data without calling a
+    feed source, and duplicate GUID handling as last-occurrence-wins.
+- Files created/modified:
+  - `task_plan.md`
+  - `findings.md`
+
+### Phase 11: Resilience coverage and hardening
+
+- **Status:** complete
+- Actions taken:
+  - Added a disk-backed offline-startup test that serves persisted data without
+    calling a feed source.
+  - Covered header/body timeouts, a real local HTTP redirect, invalid XML,
+    missing dates, duplicate GUIDs, and oversized response chunks.
+  - Extended the fetch deadline to the response body, kept final redirect URLs,
+    rejected oversize chunks before buffering, and reconciled duplicate GUIDs.
+- Files created/modified:
+  - `lib/core/network/feed_document_fetcher.dart`
+  - `lib/core/repositories/drift_feed_repository.dart`
+  - `test/core/network/feed_document_fetcher_test.dart`
+  - `test/core/feed_ingestion/feed_loader_test.dart`
+  - `test/core/feed_parsing/feed_document_parser_test.dart`
+  - `test/core/repositories/drift_repositories_test.dart`
+  - `test/core/repositories/offline_startup_test.dart`
+
+### Phase 12: Verification and documentation
+
+- **Status:** complete
+- Actions taken:
+  - Ran formatting, static analysis, the focused resilience suite, and the
+    complete test suite.
+  - Documented offline behavior, deadlines, redirects, response-size limits,
+    invalid XML handling, missing dates, and duplicate GUID reconciliation.
+- Files created/modified:
+  - `README.md`
+  - `docs/data-model.md`
+
+### Phase 6: Multi-feed discovery
+
+- **Status:** complete
+- Actions taken:
+  - Restored the completed one-feed plan and confirmed the new Git baseline is clean.
+  - Began the multi-feed reliability slice covering deduplication, filters, starring, and recovery.
+  - Found per-feed article uniqueness, existing state filters, and missing recovery controls.
+  - Defined URL-based display deduplication while retaining feed membership and syncing reader actions across copies.
+- Files created/modified:
+  - `task_plan.md`
+  - `findings.md`
+
+### Phase 7: Storage and repository hardening
+
+- **Status:** complete
+- Actions taken:
+  - Added conservative canonical-URL timeline deduplication while retaining
+    every per-feed article record.
+  - Synced read and starred actions across same-URL copies.
+  - Added safe URL replacement, retryable refresh failures, and transactional
+    feed removal with its dependent data.
+- Files created/modified:
+  - `lib/core/utils/article_deduplication_key.dart`
+  - `lib/core/repositories/drift_article_repository.dart`
+  - `lib/core/repositories/drift_feed_repository.dart`
+  - `lib/core/repositories/feed_repository.dart`
+  - `test/core/repositories/drift_repositories_test.dart`
+
+### Phase 8: Multi-feed controls and recovery UI
+
+- **Status:** complete
+- Actions taken:
+  - Added a per-feed timeline selector and direct timeline starring.
+  - Added retry, URL editing, and removal controls to subscriptions.
+  - Preserved user-entered URLs and enabled a retry action after failed
+    subscriptions or URL updates.
+- Files created/modified:
+  - `lib/features/subscriptions/presentation/subscriptions_page.dart`
+  - `lib/features/timeline/presentation/timeline_page.dart`
+
+### Phase 9: Verification and documentation
+
+- **Status:** complete
+- Actions taken:
+  - Ran formatting, static analysis, and all tests.
+  - Updated the README and data-model document for multi-feed behavior.
+- Files created/modified:
+  - `README.md`
+  - `docs/data-model.md`
+
 ### Phase 1: Discovery
 
 - **Status:** complete
@@ -71,6 +166,8 @@
 | Baseline from previous phase | 16 tests pass | 16 tests passed | ✓ |
 | Drift repositories | Subscribe, refresh, state preservation, filters | 4 tests passed | ✓ |
 | Full verification | Analyzer and all unit/repository/widget tests | No analyzer issues; 20 tests passed | ✓ |
+| Multi-feed verification | Analyzer and repository/widget integration tests | No analyzer issues; 23 tests passed | ✓ |
+| Resilience verification | Analyzer and complete test suite | No analyzer issues; 32 tests passed | ✓ |
 
 ## Error Log
 
@@ -94,6 +191,8 @@
 | 2026-09-09 | Drift deferred stream cleanup left a pending zero-duration timer | 1 | Configure synchronous stream closure for the test connection and close it explicitly |
 | 2026-09-09 | Drift and matcher exported conflicting `isNotNull` symbols | 1 | Hide the SQL symbol from the Drift test import |
 | 2026-09-09 | Final status check assumed Git metadata existed | 1 | Reviewed files directly; the project directory is not a Git repository |
+| 2026-09-09 | Feed URL normalization emitted a trailing `#` | 1 | Use a null fragment when rebuilding the URI |
+| 2026-09-09 | Redirect source URI remained at the original request URL | 1 | Use `BaseResponseWithUrl` for the final redirect destination |
 
 ## 5-Question Reboot Check
 
@@ -101,6 +200,6 @@
 |---|---|
 | Where am I? | Complete |
 | Where am I going? | Ready for the next product slice |
-| What's the goal? | One feed end-to-end |
+| What's the goal? | Resilience coverage for offline and hostile feed inputs |
 | What have I learned? | See `findings.md` |
-| What have I done? | Delivered and verified one feed end to end |
+| What have I done? | Delivered and verified ingestion resilience coverage |

@@ -22,6 +22,13 @@ class SubscriptionsPage extends StatelessWidget {
     if (added ?? false) onSubscribed();
   }
 
+  Future<void> _editFeed(BuildContext context, Feed feed) async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => AddFeedDialog(repository: repository, feed: feed),
+    );
+  }
+
   Future<void> _refresh(BuildContext context, Feed feed) async {
     final result = await repository.refresh(feed.id);
     if (context.mounted && result is FeedRefreshFailure) {
@@ -29,6 +36,30 @@ class SubscriptionsPage extends StatelessWidget {
         SnackBar(content: Text('Could not refresh ${feed.title}.')),
       );
     }
+  }
+
+  Future<void> _remove(BuildContext context, Feed feed) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Remove ${feed.title}?'),
+        content: const Text(
+          'This removes the feed and its downloaded articles from Flood.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await repository.unsubscribe(feed.id);
   }
 
   @override
@@ -60,13 +91,57 @@ class SubscriptionsPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final feed = feeds[index];
               return ListTile(
+                isThreeLine: feed.refreshError != null,
                 leading: const Icon(Icons.rss_feed),
                 title: Text(feed.title),
-                subtitle: Text(feed.refreshError ?? feed.url.toString()),
-                trailing: IconButton(
-                  onPressed: () => _refresh(context, feed),
-                  icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh ${feed.title}',
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(feed.url.toString()),
+                    if (feed.refreshError case final error?)
+                      Text(
+                        error,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                  ],
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: () => _refresh(context, feed),
+                      icon: const Icon(Icons.refresh),
+                      tooltip: feed.refreshError == null
+                          ? 'Refresh ${feed.title}'
+                          : 'Retry ${feed.title}',
+                    ),
+                    PopupMenuButton<_FeedAction>(
+                      tooltip: 'Manage ${feed.title}',
+                      onSelected: (action) {
+                        switch (action) {
+                          case _FeedAction.edit:
+                            _editFeed(context, feed);
+                          case _FeedAction.remove:
+                            _remove(context, feed);
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: _FeedAction.edit,
+                          child: Text('Edit URL'),
+                        ),
+                        PopupMenuItem(
+                          value: _FeedAction.remove,
+                          child: Text('Remove feed'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               );
             },
@@ -82,19 +157,30 @@ class SubscriptionsPage extends StatelessWidget {
   }
 }
 
+enum _FeedAction { edit, remove }
+
 class AddFeedDialog extends StatefulWidget {
-  const AddFeedDialog({required this.repository, super.key});
+  const AddFeedDialog({required this.repository, this.feed, super.key});
 
   final FeedRepository repository;
+  final Feed? feed;
 
   @override
   State<AddFeedDialog> createState() => _AddFeedDialogState();
 }
 
 class _AddFeedDialogState extends State<AddFeedDialog> {
-  final _controller = TextEditingController();
+  late final TextEditingController _controller;
   bool _isSubmitting = false;
   String? _error;
+
+  bool get _isEditing => widget.feed != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.feed?.url.toString());
+  }
 
   @override
   void dispose() {
@@ -102,7 +188,7 @@ class _AddFeedDialogState extends State<AddFeedDialog> {
     super.dispose();
   }
 
-  Future<void> _subscribe() async {
+  Future<void> _submit() async {
     final uri = Uri.tryParse(_controller.text.trim());
     if (uri == null ||
         !uri.hasAuthority ||
@@ -116,13 +202,19 @@ class _AddFeedDialogState extends State<AddFeedDialog> {
       _error = null;
     });
     try {
-      await widget.repository.subscribe(uri);
+      if (widget.feed case final feed?) {
+        await widget.repository.updateUrl(feed.id, uri);
+      } else {
+        await widget.repository.subscribe(uri);
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _error = 'Flood could not subscribe to this feed.';
+        _error = _isEditing
+            ? 'Flood could not update this feed.'
+            : 'Flood could not subscribe to this feed.';
       });
     }
   }
@@ -130,7 +222,7 @@ class _AddFeedDialogState extends State<AddFeedDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add a feed'),
+      title: Text(_isEditing ? 'Edit feed URL' : 'Add a feed'),
       content: TextField(
         key: const Key('feed-url-field'),
         controller: _controller,
@@ -138,7 +230,7 @@ class _AddFeedDialogState extends State<AddFeedDialog> {
         enabled: !_isSubmitting,
         keyboardType: TextInputType.url,
         textInputAction: TextInputAction.done,
-        onSubmitted: (_) => _subscribe(),
+        onSubmitted: (_) => _submit(),
         decoration: InputDecoration(
           labelText: 'Feed URL',
           hintText: 'https://example.com/feed.xml',
@@ -151,13 +243,19 @@ class _AddFeedDialogState extends State<AddFeedDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _isSubmitting ? null : _subscribe,
+          onPressed: _isSubmitting ? null : _submit,
           child: _isSubmitting
               ? const SizedBox.square(
                   dimension: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Subscribe'),
+              : Text(
+                  _isEditing
+                      ? 'Update and refresh'
+                      : _error == null
+                      ? 'Subscribe'
+                      : 'Try again',
+                ),
         ),
       ],
     );

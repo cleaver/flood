@@ -71,6 +71,53 @@ void main() {
     expect(feed.articles.single.publishedAt, DateTime.utc(2002, 10, 2, 17));
   });
 
+  test('accepts an article with no published or updated date', () {
+    const document = '''
+<rss version="2.0">
+  <channel>
+    <title>Undated feed</title>
+    <link>https://example.com/</link>
+    <item>
+      <guid>undated-article</guid>
+      <title>Undated article</title>
+      <link>https://example.com/undated</link>
+    </item>
+  </channel>
+</rss>''';
+
+    final feed = parser.parse(
+      document,
+      sourceUri: Uri.parse('https://example.com/feed.xml'),
+    );
+
+    expect(feed.articles.single.sourceKey, 'undated-article');
+    expect(feed.articles.single.publishedAt, isNull);
+    expect(feed.articles.single.updatedAt, isNull);
+  });
+
+  test('retains duplicate GUID entries for repository reconciliation', () {
+    const document = '''
+<rss version="2.0">
+  <channel>
+    <title>Revisions</title>
+    <link>https://example.com/</link>
+    <item><guid>revised</guid><title>First revision</title></item>
+    <item><guid>revised</guid><title>Latest revision</title></item>
+  </channel>
+</rss>''';
+
+    final feed = parser.parse(
+      document,
+      sourceUri: Uri.parse('https://example.com/feed.xml'),
+    );
+
+    expect(feed.articles, hasLength(2));
+    expect(
+      feed.articles.map((article) => article.sourceKey),
+      everyElement('revised'),
+    );
+  });
+
   test('wraps malformed XML in a domain-specific exception', () {
     expect(
       () => parser.parse(

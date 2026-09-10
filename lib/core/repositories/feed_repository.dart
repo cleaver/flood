@@ -9,6 +9,9 @@ abstract interface class FeedRepository {
   /// Validates, fetches, and persists a new subscription.
   Future<Feed> subscribe(Uri url);
 
+  /// Validates and fetches a replacement URL before changing a subscription.
+  Future<Feed> updateUrl(String id, Uri url);
+
   Future<void> unsubscribe(String id);
 
   Future<FeedRefreshResult> refresh(String id);

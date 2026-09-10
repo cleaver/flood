@@ -109,12 +109,145 @@ void main() {
     expect(unread, isEmpty);
     expect(starred.single.article.id, article.article.id);
   });
+
+  test(
+    'deduplicates matching article URLs across feeds and syncs their state',
+    () async {
+      source.results
+        ..add(
+          _loaded(
+            title: 'Primary Feed',
+            etag: '"v1"',
+            sourceKey: 'primary-guid',
+          ),
+        )
+        ..add(
+          _loaded(title: 'Mirror Feed', etag: '"v1"', sourceKey: 'mirror-guid'),
+        );
+
+      final first = await feeds.subscribe(
+        Uri.parse('https://one.example/feed'),
+      );
+      final second = await feeds.subscribe(
+        Uri.parse('https://two.example/feed'),
+      );
+      final timeline = await articles.watchArticles(const ArticleQuery()).first;
+
+      expect(timeline, hasLength(1));
+      final shownArticle = timeline.single.article;
+      await articles.setStarred(shownArticle.id, isStarred: true);
+      await articles.markRead(shownArticle.id, isRead: true);
+
+      final firstFeed = await articles
+          .watchArticles(ArticleQuery(feedId: first.id))
+          .first;
+      final secondFeed = await articles
+          .watchArticles(ArticleQuery(feedId: second.id))
+          .first;
+      final unread = await articles
+          .watchArticles(const ArticleQuery(scope: ArticleScope.unread))
+          .first;
+      final saved = await articles
+          .watchArticles(const ArticleQuery(scope: ArticleScope.starred))
+          .first;
+
+      expect(firstFeed.single.state.isRead, isTrue);
+      expect(secondFeed.single.state.isRead, isTrue);
+      expect(firstFeed.single.state.isStarred, isTrue);
+      expect(secondFeed.single.state.isStarred, isTrue);
+      expect(unread, isEmpty);
+      expect(saved, hasLength(1));
+    },
+  );
+
+  test(
+    'retries a failed refresh and removes a feed with its articles',
+    () async {
+      source.results.add(_loaded(title: 'Flood Journal', etag: '"v1"'));
+      final feed = await feeds.subscribe(Uri.parse('https://example.com/feed'));
+
+      source.errors.add(StateError('offline'));
+      final failed = await feeds.refresh(feed.id);
+      expect(failed, isA<FeedRefreshFailure>());
+      expect((await feeds.getFeed(feed.id))!.refreshError, contains('offline'));
+
+      source.results.add(_loaded(title: 'Flood Journal', etag: '"v2"'));
+      final retried = await feeds.refresh(feed.id);
+      expect(retried, isA<FeedRefreshSuccess>());
+      expect((await feeds.getFeed(feed.id))!.refreshError, isNull);
+
+      await feeds.unsubscribe(feed.id);
+      expect(await feeds.watchFeeds().first, isEmpty);
+      expect(await articles.watchArticles(const ArticleQuery()).first, isEmpty);
+    },
+  );
+
+  test('updates a feed URL only after its replacement can be loaded', () async {
+    source.results.add(_loaded(title: 'Old Feed', etag: '"v1"'));
+    final feed = await feeds.subscribe(Uri.parse('https://example.com/old'));
+
+    source.errors.add(StateError('bad replacement'));
+    await expectLater(
+      feeds.updateUrl(feed.id, Uri.parse('https://example.com/bad')),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      (await feeds.getFeed(feed.id))!.url.toString(),
+      'https://example.com/old',
+    );
+
+    source.results.add(_loaded(title: 'Corrected Feed', etag: '"v2"'));
+    final corrected = await feeds.updateUrl(
+      feed.id,
+      Uri.parse('https://example.com/corrected'),
+    );
+
+    expect(corrected.url.toString(), 'https://example.com/corrected');
+    expect(corrected.title, 'Corrected Feed');
+  });
+
+  test(
+    'reconciles duplicate GUIDs as one latest article during refresh',
+    () async {
+      source.results
+        ..add(_loaded(title: 'Revisions', etag: '"v1"', articles: []))
+        ..add(
+          _loaded(
+            title: 'Revisions',
+            etag: '"v2"',
+            articles: [
+              ParsedArticle(
+                sourceKey: 'revised-guid',
+                title: 'First revision',
+                contentHtml: '<p>Old</p>',
+              ),
+              ParsedArticle(
+                sourceKey: 'revised-guid',
+                title: 'Latest revision',
+                contentHtml: '<p>New</p>',
+              ),
+            ],
+          ),
+        );
+      final feed = await feeds.subscribe(Uri.parse('https://example.com/feed'));
+
+      final refresh = await feeds.refresh(feed.id);
+      final timeline = await articles.watchArticles(const ArticleQuery()).first;
+
+      expect((refresh as FeedRefreshSuccess).newArticleCount, 1);
+      expect(timeline, hasLength(1));
+      expect(timeline.single.article.title, 'Latest revision');
+      expect(timeline.single.article.contentHtml, '<p>New</p>');
+    },
+  );
 }
 
 FeedLoaded _loaded({
   required String title,
   required String etag,
   String content = '<p>Readable content.</p>',
+  String sourceKey = 'article-1',
+  List<ParsedArticle>? articles,
 }) {
   return FeedLoaded(
     etag: etag,
@@ -123,16 +256,18 @@ FeedLoaded _loaded({
       title: title,
       description: 'A test feed',
       siteUrl: Uri.parse('https://example.com/'),
-      articles: [
-        ParsedArticle(
-          sourceKey: 'article-1',
-          title: 'First article',
-          url: Uri.parse('https://example.com/articles/one'),
-          author: 'River Writer',
-          contentHtml: content,
-          publishedAt: DateTime.utc(2026, 9, 8, 10),
-        ),
-      ],
+      articles:
+          articles ??
+          [
+            ParsedArticle(
+              sourceKey: sourceKey,
+              title: 'First article',
+              url: Uri.parse('https://example.com/articles/one'),
+              author: 'River Writer',
+              contentHtml: content,
+              publishedAt: DateTime.utc(2026, 9, 8, 10),
+            ),
+          ],
     ),
   );
 }
@@ -147,6 +282,7 @@ class FeedRequest {
 
 class FakeFeedSource implements FeedSource {
   final results = <FeedLoadResult>[];
+  final errors = <Object>[];
   final requests = <FeedRequest>[];
 
   @override
@@ -156,6 +292,7 @@ class FakeFeedSource implements FeedSource {
     String? lastModified,
   }) async {
     requests.add(FeedRequest(uri: uri, etag: etag, lastModified: lastModified));
+    if (errors.isNotEmpty) throw errors.removeAt(0);
     return results.removeAt(0);
   }
 }

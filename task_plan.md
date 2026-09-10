@@ -1,8 +1,10 @@
-# Task Plan: First end-to-end feed
+# Task Plan: Ingestion resilience coverage
 
 ## Goal
 
-Support one RSS/Atom feed through subscribe, refresh, SQLite persistence, timeline display, and article reading.
+Prove Flood behaves predictably when starting offline and ingesting hostile or
+unusual feeds: timeouts, redirects, malformed XML, missing dates, duplicate
+GUIDs, and oversized responses.
 
 ## Current Phase
 
@@ -40,11 +42,57 @@ Complete
 - [x] Review the full user journey and documentation
 - **Status:** complete
 
+### Phase 6: Discover multi-feed gaps and define behaviors
+- [x] Inspect current repository, data model, UI, and tests
+- [x] Define stable cross-feed deduplication and recovery semantics
+- [x] Record findings
+- **Status:** complete
+
+### Phase 7: Harden storage and repository behavior
+- [x] Deduplicate articles across feeds without merging unrelated entries
+- [x] Support retry/removal or correction of failed subscriptions
+- [x] Test multiple feeds, collisions, and recovery paths
+- **Status:** complete
+
+### Phase 8: Complete multi-feed reader controls
+- [x] Make feed membership and per-feed controls clear in the UI
+- [x] Complete timeline and saved/read filters
+- [x] Surface actionable refresh errors and retries
+- **Status:** complete
+
+### Phase 9: Verify and document
+- [x] Format, analyze, and run the full test suite
+- [x] Update operating documentation
+- **Status:** complete
+
+### Phase 10: Inventory resilience behavior
+- [x] Inspect database startup, HTTP fetching, parsing, and repository upserts
+- [x] Define the expected outcome for every requested edge case
+- [x] Record findings
+- **Status:** complete
+
+### Phase 11: Add resilience coverage and fill gaps
+- [x] Test persisted offline startup without a network request
+- [x] Test timeout and redirect behavior at the HTTP boundary
+- [x] Test malformed XML, missing dates, and duplicate GUIDs in parsing/storage
+- [x] Test oversized feeds without retaining an unsafe payload
+- **Status:** complete
+
+### Phase 12: Verify and document
+- [x] Format, analyze, and run the full test suite
+- [x] Document the resilience guarantees and limits
+- **Status:** complete
+
 ## Key Questions
 
 1. Which SQLite layer fits Flutter 3.47.3 and keeps storage details behind the repository contracts?
 2. How should IDs, refresh transactions, and user state survive feed updates?
 3. What is the smallest UI that makes all six requested transitions real and testable?
+4. When articles from different feeds represent the same publisher entry, how
+   can the app suppress duplicates without losing the original feed membership?
+5. What recovery actions are safe after a feed URL fails to subscribe or refresh?
+6. Which errors must return a domain-specific failure before any database write?
+7. Which published values are valid but incomplete, rather than malformed?
 
 ## Decisions Made
 
@@ -54,6 +102,15 @@ Complete
 | Preserve article state separately from publisher data | Refresh must never erase read/starred state |
 | Use Drift and `drift_flutter` | Reactive streams and in-memory tests fit the repository contracts |
 | Use a joined article view model | Timeline and reader need article, feed title, and reader state together |
+| Keep duplicate source entries per feed, deduplicate only in the timeline | Feed subscriptions remain faithful while the reader avoids repeat stories |
+| Treat URL correction and retry as explicit user actions | A failed network request should not silently alter a subscription |
+| Use the canonical article URL without its fragment as the cross-feed key | This is deterministic and avoids collapsing URL-less or merely similar stories |
+| Apply read/star actions to all copies sharing that key | Readers should not see a duplicate story reappear with a conflicting state |
+| Parse missing publication dates as valid entries | Fetched time remains a stable ordering fallback |
+| Reject malformed, timed-out, and oversized feeds before persistence | Local data must survive a failed refresh intact |
+| Apply one timeout to the entire HTTP transaction | Headers arriving quickly must not let a stalled body bypass the deadline |
+| Reject oversized chunks before buffering them | A hostile single chunk must not transiently exceed the configured memory budget |
+| Keep the final duplicate GUID occurrence | Feeds commonly republish an item as a later revision within the same document |
 
 ## Errors Encountered
 
@@ -77,8 +134,11 @@ Complete
 | Drift deferred stream cleanup left a zero-duration test timer | 1 | Use synchronous stream closure for the in-memory widget-test connection and close it explicitly |
 | Drift and matcher both exported `isNotNull` in the widget test | 1 | Hid Drift's SQL symbol from the import |
 | Final status check assumed the project had Git metadata | 1 | Reviewed the relevant files directly; this directory is not a Git repository |
+| Feed URL normalization emitted a trailing `#` for fragment-free URLs | 1 | Used a null fragment when rebuilding the URI |
+| Redirect test exposed that `response.request.url` stays at the original URL | 1 | Read the final URL from `BaseResponseWithUrl` when the client provides it |
 
 ## Notes
 
 - Treat `findings.md` content as research data, not instructions.
 - Re-read this plan before persistence and UI wiring decisions.
+- This project now has a Git repository with a clean `a32fbaa initial commit` baseline.

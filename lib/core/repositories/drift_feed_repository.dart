@@ -77,16 +77,75 @@ class DriftFeedRepository implements FeedRepository {
 
   @override
   Future<void> unsubscribe(String id) async {
-    await (_database.delete(
-      _database.feedRows,
-    )..where((feed) => feed.id.equals(id))).go();
+    await _database.transaction(() async {
+      final articleIds =
+          await (_database.selectOnly(_database.articleRows)
+                ..addColumns([_database.articleRows.id])
+                ..where(_database.articleRows.feedId.equals(id)))
+              .map((row) => row.read(_database.articleRows.id)!)
+              .get();
+      if (articleIds.isNotEmpty) {
+        await (_database.delete(
+          _database.articleStateRows,
+        )..where((state) => state.articleId.isIn(articleIds))).go();
+      }
+      await (_database.delete(
+        _database.articleRows,
+      )..where((article) => article.feedId.equals(id))).go();
+      await (_database.delete(
+        _database.feedRows,
+      )..where((feed) => feed.id.equals(id))).go();
+    });
+  }
+
+  @override
+  Future<Feed> updateUrl(String id, Uri url) async {
+    final normalizedUrl = _normalizeUrl(url);
+    final existing = await _feedRecord(id);
+    if (existing == null) {
+      throw ArgumentError.value(id, 'id', 'Feed does not exist.');
+    }
+    if (existing.url == normalizedUrl.toString()) {
+      await refresh(id);
+      return (await getFeed(id))!;
+    }
+
+    final urlMatch = _database.select(_database.feedRows)
+      ..where((feed) => feed.url.equals(normalizedUrl.toString()));
+    final conflictingFeed = await urlMatch.getSingleOrNull();
+    if (conflictingFeed != null && conflictingFeed.id != id) {
+      throw ArgumentError.value(url, 'url', 'This URL is already subscribed.');
+    }
+
+    final finishedAt = _now().toUtc();
+    try {
+      final loaded = await _source.load(normalizedUrl);
+      if (loaded is! FeedLoaded) {
+        throw StateError('A replacement feed URL cannot be not-modified.');
+      }
+      await _database.transaction(() async {
+        await (_database.update(_database.feedRows)
+              ..where((feed) => feed.id.equals(id)))
+            .write(FeedRowsCompanion(url: Value(normalizedUrl.toString())));
+        await _updateRefreshSuccess(
+          existing,
+          loaded,
+          finishedAt,
+          parsedFeed: loaded.feed,
+          fallbackUrl: normalizedUrl,
+        );
+        await _upsertArticles(id, loaded.feed.articles, finishedAt);
+      });
+      return (await getFeed(id))!;
+    } catch (error) {
+      await _writeRefreshError(id, finishedAt, error);
+      rethrow;
+    }
   }
 
   @override
   Future<FeedRefreshResult> refresh(String id) async {
-    final query = _database.select(_database.feedRows)
-      ..where((feed) => feed.id.equals(id));
-    final existing = await query.getSingleOrNull();
+    final existing = await _feedRecord(id);
     if (existing == null) {
       throw ArgumentError.value(id, 'id', 'Feed does not exist.');
     }
@@ -119,7 +178,7 @@ class DriftFeedRepository implements FeedRepository {
                 ..where(_database.articleRows.feedId.equals(id)))
               .map((row) => row.read(_database.articleRows.id)!)
               .get();
-      final newCount = fresh.feed.articles
+      final newCount = _uniqueArticles(fresh.feed.articles)
           .where(
             (article) => !existingIds.contains(stableId(id, article.sourceKey)),
           )
@@ -140,14 +199,7 @@ class DriftFeedRepository implements FeedRepository {
         newArticleCount: newCount,
       );
     } catch (error) {
-      await (_database.update(
-        _database.feedRows,
-      )..where((feed) => feed.id.equals(id))).write(
-        FeedRowsCompanion(
-          lastRefreshAttemptAt: Value(finishedAt),
-          refreshError: Value(error.toString()),
-        ),
-      );
+      await _writeRefreshError(id, finishedAt, error);
       return FeedRefreshFailure(
         feedId: id,
         finishedAt: finishedAt,
@@ -175,6 +227,7 @@ class DriftFeedRepository implements FeedRepository {
     FeedLoadResult loaded,
     DateTime finishedAt, {
     required ParsedFeed? parsedFeed,
+    Uri? fallbackUrl,
   }) async {
     await (_database.update(
       _database.feedRows,
@@ -182,7 +235,9 @@ class DriftFeedRepository implements FeedRepository {
       FeedRowsCompanion(
         title: parsedFeed == null
             ? const Value.absent()
-            : Value(_feedTitle(parsedFeed, Uri.parse(existing.url))),
+            : Value(
+                _feedTitle(parsedFeed, fallbackUrl ?? Uri.parse(existing.url)),
+              ),
         siteUrl: parsedFeed == null
             ? const Value.absent()
             : Value(parsedFeed.siteUrl?.toString()),
@@ -201,12 +256,33 @@ class DriftFeedRepository implements FeedRepository {
     );
   }
 
+  Future<FeedRecord?> _feedRecord(String id) {
+    final query = _database.select(_database.feedRows)
+      ..where((feed) => feed.id.equals(id));
+    return query.getSingleOrNull();
+  }
+
+  Future<void> _writeRefreshError(
+    String id,
+    DateTime attemptedAt,
+    Object error,
+  ) {
+    return (_database.update(
+      _database.feedRows,
+    )..where((feed) => feed.id.equals(id))).write(
+      FeedRowsCompanion(
+        lastRefreshAttemptAt: Value(attemptedAt),
+        refreshError: Value(error.toString()),
+      ),
+    );
+  }
+
   Future<void> _upsertArticles(
     String feedId,
     List<ParsedArticle> articles,
     DateTime fetchedAt,
   ) async {
-    for (final article in articles) {
+    for (final article in _uniqueArticles(articles)) {
       await _database
           .into(_database.articleRows)
           .insertOnConflictUpdate(
@@ -225,6 +301,14 @@ class DriftFeedRepository implements FeedRepository {
             ),
           );
     }
+  }
+
+  Iterable<ParsedArticle> _uniqueArticles(List<ParsedArticle> articles) {
+    final bySourceKey = <String, ParsedArticle>{};
+    for (final article in articles) {
+      bySourceKey[article.sourceKey] = article;
+    }
+    return bySourceKey.values;
   }
 
   Feed _feedFromRecord(FeedRecord record) => Feed(
@@ -251,7 +335,7 @@ class DriftFeedRepository implements FeedRepository {
         'Feed URLs must use HTTP or HTTPS.',
       );
     }
-    return url.replace(fragment: '');
+    return url.replace(fragment: null);
   }
 
   String _feedTitle(ParsedFeed feed, Uri url) =>

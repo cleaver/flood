@@ -16,13 +16,18 @@ items exist.
 
 ## Getting Started
 
-Flood currently supports its first complete vertical slice:
+Flood currently supports a resilient multi-feed reading slice:
 
-1. Add an HTTP or HTTPS RSS/Atom feed from Subscriptions.
+1. Add and manage multiple HTTP or HTTPS RSS/Atom feeds from Subscriptions.
 2. Fetch, parse, and atomically persist the feed and its articles.
-3. Refresh one feed or all feeds with HTTP cache validators.
-4. Filter the reactive timeline by All, Unread, or Saved.
-5. Read feed-supplied HTML, open the original URL, and save an article.
+3. Refresh one feed or all feeds with HTTP cache validators, then retry failures.
+4. Correct a feed URL safely: Flood verifies and fetches the replacement before
+   updating the saved subscription.
+5. Filter the reactive timeline by feed, All, Unread, or Saved.
+6. Deduplicate entries with the same canonical article URL across feeds while
+   keeping each feed's original record.
+7. Read feed-supplied HTML, open the original URL, and save an article from a
+   timeline row or the reader.
 
 Install dependencies and run the app with:
 
@@ -45,6 +50,21 @@ flutter test
 ```
 
 The Android release manifest includes network access for feed refreshes.
+
+## Resilience behavior
+
+- Flood opens its local database before any refresh, so previously downloaded
+  feeds and articles remain readable while offline.
+- A feed download has a 15-second end-to-end deadline by default; it covers
+  both response headers and body bytes.
+- HTTP redirects are followed by the platform client. Relative links are then
+  resolved against the final feed URL.
+- Invalid XML, timeouts, HTTP errors, and oversized responses fail before
+  publisher data is written. A failed refresh keeps prior articles available.
+- Responses are limited to 5 MiB by default, including protection against a
+  single oversized response chunk.
+- Missing dates are valid and sort by fetch time. Repeated GUIDs in one feed
+  resolve to the final occurrence.
 
 ## Flutter Resources
 
