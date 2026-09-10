@@ -4,6 +4,51 @@
 
 ### Session: 2026-09-10
 
+### Phase 20: Discover Markdown and HTML content shapes
+
+- **Status:** complete
+- Actions taken:
+  - Started a rendering investigation for Markdown-heavy cleaver.ca content
+    and rich HTML from simonwillison.net.
+  - Confirmed the existing reader sends stored content directly to
+    `flutter_widget_from_html_core`.
+  - Verified live cleaver.ca descriptions use Markdown-like headings,
+    emphasis, links, and blockquotes; Simon Willison summaries use escaped
+    rich HTML with paragraphs, lists, code, images, and video.
+
+### Phase 21: Define a conservative Markdown rendering policy
+
+- **Status:** complete
+- Actions taken:
+  - Chose the official Dart `markdown` package as a Markdown-to-HTML adapter.
+  - Defined detection that requires recognizable Markdown signals and skips
+    content containing block-level HTML.
+  - Kept formatting at presentation time so stored feed payloads remain raw.
+
+### Phase 22: Implement and test Markdown-aware article rendering
+
+- **Status:** complete
+- Actions taken:
+  - Added `ArticleContentFormatter` and wired it into the article reader.
+  - Added formatter coverage for headings, emphasis, links, blockquotes,
+    mixed inline HTML, rich HTML preservation, and plain prose.
+  - Extended the widget journey to verify a Markdown heading renders as HTML.
+- Files created/modified:
+  - `lib/core/content/article_content_formatter.dart`
+  - `lib/features/article/presentation/article_page.dart`
+  - `pubspec.yaml`
+  - `pubspec.lock`
+  - `test/core/content/article_content_formatter_test.dart`
+  - `test/widget_test.dart`
+
+### Phase 23: Verify and document Markdown support
+
+- **Status:** complete
+- Actions taken:
+  - Formatted the project and verified `flutter analyze` has no issues.
+  - Ran the complete Flutter suite successfully (40 tests).
+  - Documented the display-time conversion and rich-HTML preservation policy.
+
 ### Phase 17: Reproduce live removed-entry report
 
 - **Status:** complete

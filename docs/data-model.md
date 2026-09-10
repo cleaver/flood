@@ -52,3 +52,9 @@ a repeated `source_key` within a feed document, so a repeated GUID becomes a
 single latest article. Parse and fetch failures never write publisher data;
 failed refreshes retain the existing local article set and record the error on
 the feed.
+
+`ArticleContentFormatter` runs only when the reader is about to display an
+article. It recognizes common Markdown structure, converts it to HTML with the
+GitHub-flavored syntax set, and keeps the original payload when block-level HTML
+is present. This keeps rich HTML feeds intact while allowing Markdown-heavy
+feeds to use the same renderer and link handling.

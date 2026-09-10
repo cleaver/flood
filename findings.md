@@ -77,6 +77,26 @@
 - Manual refreshes now bypass stored validators (`force: true`) so the UI can
   detect removals despite a stale upstream ETag. Conditional refresh remains the
   default repository behavior for non-interactive callers.
+- The current cleaver.ca RSS feed's descriptions are Markdown-like plain text:
+  headings (`##`), emphasis (`*...*`/`_..._`), links (`[label](url)`), blockquotes,
+  and footnote syntax appear without meaningful HTML tags.
+- The current Simon Willison Atom feed's summaries contain escaped, structured
+  HTML (`<p>`, `<blockquote>`, `<ul>`, `<img>`, `<video>`, and code blocks), so
+  they must stay on the existing HTML rendering path.
+- Markdown conversion should happen at reader presentation time, not ingestion,
+  so the original feed payload remains available and a future renderer can make
+  a different choice without refetching.
+- A conservative detector should require Markdown structure (for example a
+  heading, link, list, quote, or emphasis marker) and reject content containing
+  meaningful HTML tags. Plain prose should remain plain text rather than being
+  needlessly transformed.
+- The official Dart `markdown` package (7.3.1) converts Markdown to HTML and
+  supports GitHub-flavored fenced code, tables, strikethrough, and footnotes.
+  Its HTML output can feed the existing `HtmlWidget`, preserving the current
+  link callback and base-URL behavior.
+- The formatter treats block-level HTML as authoritative. Inline HTML may be
+  retained inside a Markdown conversion, which handles cleaver.ca's opening
+  image-credit link without reinterpreting Simon Willison's rich summaries.
 
 ## Technical Decisions
 

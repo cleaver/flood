@@ -50,7 +50,7 @@ void main() {
 
     expect(find.text('River Writer · Flood Journal'), findsOneWidget);
     final reader = tester.widget<HtmlWidget>(find.byType(HtmlWidget));
-    expect(reader.html, contains('Readable content.'));
+    expect(reader.html, contains('<h2>Readable content</h2>'));
     await tester.tap(find.byTooltip('Save article'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
@@ -103,7 +103,7 @@ class _FixtureSource implements FeedSource {
                   title: 'First article',
                   author: 'River Writer',
                   url: Uri.parse('https://example.com/articles/one'),
-                  contentHtml: '<p>Readable content.</p>',
+                  contentHtml: '## Readable content',
                   publishedAt: DateTime.utc(2026, 9, 8, 10),
                 ),
               ]

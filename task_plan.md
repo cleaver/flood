@@ -7,7 +7,7 @@ them as removed, and make that state clear in both the timeline and reader.
 
 ## Current Phase
 
-Phase 19
+Phase 23
 
 ## Phases
 
@@ -124,6 +124,30 @@ Phase 19
 - [x] Report the database evidence and rebuild instructions
 - **Status:** complete
 
+### Phase 20: Discover Markdown and HTML content shapes
+- [x] Inspect the current reader rendering boundary and dependencies
+- [x] Fetch representative entries from the cleaver.ca and Simon Willison feeds
+- [x] Record content-shape findings and safety constraints
+- **Status:** complete
+
+### Phase 21: Define a conservative Markdown rendering policy
+- [x] Choose a Markdown-to-HTML strategy compatible with the existing reader
+- [x] Define positive Markdown signals and HTML-preservation rules
+- [x] Cover mixed content, escaped text, and malformed markup expectations
+- **Status:** complete
+
+### Phase 22: Implement and test Markdown-aware article rendering
+- [x] Add the conversion/detection helper behind a small testable boundary
+- [x] Render Markdown only when it improves plain-text layout
+- [x] Preserve rich HTML and verify links, code, lists, and emphasis
+- **Status:** complete
+
+### Phase 23: Verify and document Markdown support
+- [x] Format, analyze, and run focused and complete tests
+- [x] Document the rendering policy and feed-specific behavior
+- [x] Review the live-feed result without changing stored article data
+- **Status:** complete
+
 ## Key Questions
 
 1. Which SQLite layer fits Flutter 3.47.3 and keeps storage details behind the repository contracts?
@@ -183,6 +207,8 @@ Phase 19
 | Feed URL normalization emitted a trailing `#` for fragment-free URLs | 1 | Used a null fragment when rebuilding the URI |
 | Redirect test exposed that `response.request.url` stays at the original URL | 1 | Read the final URL from `BaseResponseWithUrl` when the client provides it |
 | Removed-entry widget test tapped the AppBar title instead of the shell tab | 1 | Tap the `Timeline` navigation destination |
+| Planning patch hung while targeting the read-only checkout | 1 | Terminated it and used the direct patch API with the verified relative path |
+| Formatter directory creation was denied by the sandbox | 1 | Requested scoped write access, then created the directory |
 
 ## Notes
 

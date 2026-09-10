@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:flood/core/content/article_content_formatter.dart';
 import 'package:flood/core/models/article_with_state.dart';
 import 'package:flood/core/repositories/article_repository.dart';
 
@@ -42,7 +43,9 @@ class ArticlePage extends StatelessWidget {
         }
 
         final article = item.article;
-        final content = article.contentHtml ?? article.summaryHtml;
+        final content = const ArticleContentFormatter().format(
+          article.contentHtml ?? article.summaryHtml,
+        );
         return Scaffold(
           appBar: AppBar(
             title: Text(item.feedTitle),

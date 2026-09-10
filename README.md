@@ -27,7 +27,8 @@ Flood currently supports a resilient multi-feed reading slice:
 5. Filter the reactive timeline by feed, All, Unread, or Saved.
 6. Deduplicate entries with the same canonical article URL across feeds while
    keeping each feed's original record.
-7. Read feed-supplied HTML, open the original URL, and save an article from a
+7. Render Markdown-like feed content with the same HTML reader, while leaving
+   rich HTML untouched; open the original URL and save an article from a
    timeline row or the reader.
 
 Install dependencies and run the app with:
@@ -70,6 +71,10 @@ The Android release manifest includes network access for feed refreshes.
   intentionally skip them so a stale upstream ETag cannot hide removals.
 - Entries absent from a successful refresh are retained and labeled “Removed
   from feed”; a failed or `304 Not Modified` refresh never applies that label.
+- Article content is formatted at display time when it has recognizable
+  Markdown structure and no block-level HTML. Rich HTML feeds stay on the
+  original HTML path, and simple inline HTML in Markdown is preserved by the
+  converter.
 
 ## Flutter Resources
 
