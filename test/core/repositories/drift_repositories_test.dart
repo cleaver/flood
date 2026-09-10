@@ -72,6 +72,31 @@ void main() {
   });
 
   test(
+    'forced refresh bypasses stale validators and reconciles removals',
+    () async {
+      source.results
+        ..add(_loaded(title: 'Flood Journal', etag: '"v1"'))
+        ..add(_loaded(title: 'Flood Journal', etag: '"v1"', articles: []));
+      final feed = await feeds.subscribe(
+        Uri.parse('https://example.com/feed.xml'),
+      );
+      final articleId =
+          (await articles.watchArticles(const ArticleQuery()).first)
+              .single
+              .article
+              .id;
+
+      final result = await feeds.refresh(feed.id, force: true);
+      final removed = await articles.watchArticle(articleId).first;
+
+      expect(result, isA<FeedRefreshSuccess>());
+      expect(source.requests.last.etag, isNull);
+      expect(source.requests.last.lastModified, isNull);
+      expect(removed!.article.isRemoved, isTrue);
+    },
+  );
+
+  test(
     'an unchanged refresh updates successfully without replacing articles',
     () async {
       source.results

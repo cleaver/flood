@@ -14,7 +14,11 @@ abstract interface class FeedRepository {
 
   Future<void> unsubscribe(String id);
 
-  Future<FeedRefreshResult> refresh(String id);
+  /// Refreshes a feed using its cache validators unless [force] is true.
+  ///
+  /// A forced refresh skips stored validators so a manual refresh can detect
+  /// publisher-side changes even when an upstream server reuses a stale ETag.
+  Future<FeedRefreshResult> refresh(String id, {bool force = false});
 
-  Future<List<FeedRefreshResult>> refreshAll();
+  Future<List<FeedRefreshResult>> refreshAll({bool force = false});
 }

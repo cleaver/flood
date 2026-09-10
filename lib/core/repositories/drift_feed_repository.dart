@@ -40,7 +40,7 @@ class DriftFeedRepository implements FeedRepository {
       ..where((feed) => feed.url.equals(normalizedUrl.toString()));
     final existing = await existingQuery.getSingleOrNull();
     if (existing != null) {
-      await refresh(existing.id);
+      await refresh(existing.id, force: true);
       return (await getFeed(existing.id))!;
     }
 
@@ -146,7 +146,7 @@ class DriftFeedRepository implements FeedRepository {
   }
 
   @override
-  Future<FeedRefreshResult> refresh(String id) async {
+  Future<FeedRefreshResult> refresh(String id, {bool force = false}) async {
     final existing = await _feedRecord(id);
     if (existing == null) {
       throw ArgumentError.value(id, 'id', 'Feed does not exist.');
@@ -156,8 +156,8 @@ class DriftFeedRepository implements FeedRepository {
     try {
       final loaded = await _source.load(
         Uri.parse(existing.url),
-        etag: existing.etag,
-        lastModified: existing.lastModified,
+        etag: force ? null : existing.etag,
+        lastModified: force ? null : existing.lastModified,
       );
       if (loaded is FeedUnchanged) {
         await _updateRefreshSuccess(
@@ -213,7 +213,7 @@ class DriftFeedRepository implements FeedRepository {
   }
 
   @override
-  Future<List<FeedRefreshResult>> refreshAll() async {
+  Future<List<FeedRefreshResult>> refreshAll({bool force = false}) async {
     final ids =
         await (_database.selectOnly(_database.feedRows)
               ..addColumns([_database.feedRows.id]))
@@ -221,7 +221,7 @@ class DriftFeedRepository implements FeedRepository {
             .get();
     final results = <FeedRefreshResult>[];
     for (final id in ids) {
-      results.add(await refresh(id));
+      results.add(await refresh(id, force: force));
     }
     return results;
   }

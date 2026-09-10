@@ -4,6 +4,42 @@
 
 ### Session: 2026-09-10
 
+### Phase 17: Reproduce live removed-entry report
+
+- **Status:** complete
+- Actions taken:
+  - Fetched `https://cleaver.ca/rss.xml` and compared unconditional and
+    validator-backed responses.
+  - Inspected `/home/cleaver/Documents/flood.sqlite` without mutating it.
+  - Confirmed four absent entries remained unmarked because the server returned
+    `304 Not Modified` for a stale ETag.
+
+### Phase 18: Make manual refreshes reliable
+
+- **Status:** complete
+- Actions taken:
+  - Added an optional forced-refresh mode to the feed repository contract.
+  - Wired timeline and subscription refresh actions to bypass stored validators.
+  - Added a regression test proving a forced refresh reconciles removals even
+    when the validator value is reused.
+- Files created/modified:
+  - `lib/core/repositories/feed_repository.dart`
+  - `lib/core/repositories/drift_feed_repository.dart`
+  - `lib/features/subscriptions/presentation/subscriptions_page.dart`
+  - `lib/features/timeline/presentation/timeline_page.dart`
+  - `test/core/repositories/drift_repositories_test.dart`
+
+### Phase 19: Verify and document the live-feed fix
+
+- **Status:** complete
+- Actions taken:
+  - Documented the stale-validator behavior and forced manual refresh contract.
+  - Ran `flutter analyze` successfully.
+  - Ran the focused repository tests and complete suite successfully (35 tests).
+- Files created/modified:
+  - `README.md`
+  - `docs/data-model.md`
+
 ### Phase 14: Persist removal state
 
 - **Status:** complete

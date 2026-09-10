@@ -20,7 +20,8 @@ Flood currently supports a resilient multi-feed reading slice:
 
 1. Add and manage multiple HTTP or HTTPS RSS/Atom feeds from Subscriptions.
 2. Fetch, parse, and atomically persist the feed and its articles.
-3. Refresh one feed or all feeds with HTTP cache validators, then retry failures.
+3. Refresh one feed or all feeds; manual refreshes bypass cached validators so
+   publisher-side removals are detected, then retry failures.
 4. Correct a feed URL safely: Flood verifies and fetches the replacement before
    updating the saved subscription.
 5. Filter the reactive timeline by feed, All, Unread, or Saved.
@@ -65,6 +66,8 @@ The Android release manifest includes network access for feed refreshes.
   single oversized response chunk.
 - Missing dates are valid and sort by fetch time. Repeated GUIDs in one feed
   resolve to the final occurrence.
+- Routine repository refreshes send HTTP cache validators. Manual refreshes
+  intentionally skip them so a stale upstream ETag cannot hide removals.
 - Entries absent from a successful refresh are retained and labeled “Removed
   from feed”; a failed or `304 Not Modified` refresh never applies that label.
 

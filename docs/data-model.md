@@ -29,7 +29,9 @@ never collapsed across feeds, avoiding false matches.
 
 `FeedRepository` owns subscription and refresh workflows. `ArticleRepository`
 owns timeline queries and reader state. Both expose streams so the UI can render
-local data immediately and react when a refresh updates the database.
+local data immediately and react when a refresh updates the database. Refreshes
+are conditional by default; user-triggered refreshes pass `force: true` to skip
+stored validators and obtain a complete feed snapshot for removal reconciliation.
 
 The interfaces are storage-agnostic. The first implementation can use Drift and
 SQLite without leaking Drift types into the feature UI.

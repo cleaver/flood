@@ -7,7 +7,7 @@ them as removed, and make that state clear in both the timeline and reader.
 
 ## Current Phase
 
-Phase 15
+Phase 19
 
 ## Phases
 
@@ -106,6 +106,24 @@ Phase 15
 - [x] Update the data-model and README documentation
 - **Status:** complete
 
+### Phase 17: Reproduce live removed-entry report
+- [x] Inspect the live feed response and its cache validators
+- [x] Inspect the local development database for the affected subscription
+- [x] Confirm the refresh branch that prevents removal reconciliation
+- **Status:** complete
+
+### Phase 18: Make manual refreshes reliable
+- [x] Add an explicit forced-refresh option to repository contracts
+- [x] Use forced refreshes for user-triggered feed and timeline actions
+- [x] Add regression coverage for stale validators hiding removals
+- **Status:** complete
+
+### Phase 19: Verify and document the live-feed fix
+- [x] Format, analyze, and run the focused and complete test suites
+- [x] Document the stale-validator finding and manual-refresh behavior
+- [x] Report the database evidence and rebuild instructions
+- **Status:** complete
+
 ## Key Questions
 
 1. Which SQLite layer fits Flutter 3.47.3 and keeps storage details behind the repository contracts?
@@ -138,6 +156,7 @@ Phase 15
 | Clear the marker when an entry returns | Republishing an old entry should make it active again without losing reader state |
 | Store removal on the publisher-owned article row, not article state | Removed is feed truth; read/starred/scroll remain reader truth |
 | Add the field with a default-false migration | Existing databases remain active and all preexisting entries stay published until a successful refresh observes otherwise |
+| Keep conditional refreshes available but force user-triggered refreshes | A manual refresh must obtain a complete snapshot when a publisher or CDN reuses an old ETag; routine callers can still use cache validators |
 
 ## Errors Encountered
 

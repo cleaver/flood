@@ -30,7 +30,7 @@ class SubscriptionsPage extends StatelessWidget {
   }
 
   Future<void> _refresh(BuildContext context, Feed feed) async {
-    final result = await repository.refresh(feed.id);
+    final result = await repository.refresh(feed.id, force: true);
     if (context.mounted && result is FeedRefreshFailure) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not refresh ${feed.title}.')),

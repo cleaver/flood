@@ -65,6 +65,18 @@
 - The migration must default existing rows to `false`; only a successful
   `FeedLoaded` response can mark absent rows as removed, while `304` and failed
   requests leave the previous marker unchanged.
+- The Linux development database is `/home/cleaver/Documents/flood.sqlite` because
+  `drift_flutter` stores `flood.sqlite` in the application documents directory.
+- The live `https://cleaver.ca/rss.xml` response currently contains 18 items,
+  while the local database contains 22 rows for that feed. Four older rows are
+  absent from the live XML but still have `is_removed = 0`.
+- The feed's stored validator (`W/"da1b4118eb2fa55b8e9297c91c60fbfa"`) receives
+  `304 Not Modified`, while an unconditional request returns the 18-item body.
+  This stale-validator response explains why the repository never entered its
+  successful full-snapshot reconciliation branch.
+- Manual refreshes now bypass stored validators (`force: true`) so the UI can
+  detect removals despite a stale upstream ETag. Conditional refresh remains the
+  default repository behavior for non-interactive callers.
 
 ## Technical Decisions
 

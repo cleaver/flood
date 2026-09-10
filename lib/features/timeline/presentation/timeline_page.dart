@@ -29,7 +29,7 @@ class _TimelinePageState extends State<TimelinePage> {
   String? _feedId;
 
   Future<void> _refresh() async {
-    final results = await widget.feedRepository.refreshAll();
+    final results = await widget.feedRepository.refreshAll(force: true);
     final failures = results.whereType<FeedRefreshFailure>().length;
     if (mounted && failures > 0) {
       ScaffoldMessenger.of(context).showSnackBar(
