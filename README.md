@@ -53,6 +53,13 @@ flutter test
 
 The Android release manifest includes network access for feed refreshes.
 
+## Desktop window behavior
+
+On Linux, macOS, and Windows, Flood remembers the last normal window width and
+height and restores them on the next launch. The first-launch fallback is
+1280×720, with a 640×480 minimum. Maximized and fullscreen bounds are not saved;
+mobile and web builds do not apply desktop window persistence.
+
 ## Resilience behavior
 
 - Flood opens its local database before any refresh, so previously downloaded
