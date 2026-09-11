@@ -126,3 +126,75 @@
 
 - Drift Flutter supports native and web targets, but a web release will require
   the documented SQLite WASM assets.
+
+## Window-size Persistence Findings
+
+- The running Flood app is a Flutter desktop application. The current Linux
+  runner calls `gtk_window_set_default_size(window, 1280, 720)` and the Windows
+  runner creates a `1280x720` window at startup.
+- `lib/main.dart` currently calls `runApp` directly. There is no desktop window
+  lifecycle initialization or persisted UI-preferences store.
+- The existing Drift database is responsible for feed/article content and
+  reader state. Window dimensions are application preferences, so they should
+  not require a Drift schema migration.
+- The requested behavior is interpreted as restoring the app window's width
+  and height. It does not change the operating system's monitor resolution.
+- The feature should be desktop-only. Mobile and web builds should compile and
+  behave as no-ops because they do not expose the same resizable native window
+  lifecycle.
+- A small `window_manager` integration can read/apply dimensions and observe
+  resize/close events. `shared_preferences` is sufficient for two persisted
+  values and keeps the content database boundary clean.
+- The restored dimensions need validation: missing or corrupt values use the
+  existing `1280x720` fallback, values below a minimum usable size are raised
+  to that minimum, and non-finite/out-of-range values must not be applied.
+- Resize writes should be debounced. The latest valid restored size should be
+  flushed on close so a rapid resize followed by quit does not lose state.
+- The implementation should not overwrite the user's restored size with
+  maximized/fullscreen bounds. Position persistence is outside this feature;
+  if added later, it must validate monitor/work-area availability separately.
+
+## Window-size Technical Decisions
+
+| Decision | Rationale |
+|---|---|
+| Store only width and height in `shared_preferences` | This is lightweight UI state and does not belong in the feed/content schema |
+| Use `window_manager` behind a desktop-gated boundary | Centralizes Linux, Windows, and macOS window lifecycle behavior without changing feature pages |
+| Keep `1280x720` as the fallback and use a minimum such as `640x480` | Existing behavior remains safe on first launch or after corrupt preferences |
+| Apply saved size before showing the first frame | Prevents an obvious default-size flash on relaunch |
+| Debounce resize writes and flush on close | Avoids excessive preference writes while preserving the final size |
+| Do not persist position, maximize, or fullscreen state in the first slice | The request only requires dimensions and these states have additional monitor/display edge cases |
+
+## Window-size Verification Findings
+
+- `window_manager` 0.5.2 and `shared_preferences` 2.5.5 resolve on the
+  project's Flutter/Dart versions.
+- Flutter regenerated Linux, Windows, and macOS plugin registrants. The Linux
+  registrant includes `window_manager` and `screen_retriever`; macOS and
+  Windows registrants include the corresponding native plugins.
+- `flutter analyze` is clean, the focused window suite passes 11 tests, and
+  the complete Flutter suite passes 50 tests.
+- `flutter build linux --debug` succeeds. A direct Linux runtime startup also
+  succeeds without missing-plugin errors; the new window is titled `Flood` and
+  the Linux preferences file contains the expected width and height keys.
+- `flutter build web` succeeds, confirming the conditional stub excludes the
+  desktop window-manager implementation from web compilation.
+- The runtime preference file is stored under
+  `/home/cleaver/.local/share/ca.cleaver.flood/shared_preferences.json` in this
+  development environment. This is evidence of the plugin path only; the app
+  code does not depend on that absolute location.
+- The Linux `window_manager` plugin emits resize events from GTK's resize and
+  configure hooks, so the controller's listener receives native Linux resizes
+  as well as the macOS/Windows completion event when available.
+
+## Design review — 2026-09-11
+
+- Reviewed all presentation source and the product brief; no running UI or screenshots inspected.
+- Material 3 generated colour schemes, unconditional bottom navigation, full-width lists, and unconstrained reader text account for much of the generic presentation.
+- Today is not date-limited. Article dates and summaries exist but are not displayed in rows.
+- Settings is static; In app contradicts externalApplication link launching.
+- Apple materials search result describes Liquid Glass for controls/navigation: https://developer.apple.com/design/human-interface-guidelines/materials . Direct HIG page reads require JavaScript, so no further claims are based on those unavailable bodies.
+
+- Recommended quiet editorial direction: neutral surfaces, crisp blue accent, custom article rows, constrained reading column, and adaptive desktop sidebar/list/reader layout. Detailed proposals are in docs/design-review.md.
+
+- User confirmed: retain app dark mode and allow white-background article reading independently. Review now specifies separate app/reader preferences and a complete reader palette.

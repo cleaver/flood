@@ -341,3 +341,86 @@
 | What's the goal? | Resilience coverage for offline and hostile feed inputs |
 | What have I learned? | See `findings.md` |
 | What have I done? | Delivered and verified ingestion resilience coverage |
+
+## Session: 2026-09-10 — Desktop window-size persistence plan
+
+### Phase 24: Discover window persistence boundary
+
+- **Status:** complete
+- Actions taken:
+  - Inspected the active Flood source tree and confirmed it is a Flutter
+    desktop-capable app.
+  - Located the hard-coded 1280×720 defaults in the Linux and Windows runners.
+  - Confirmed `main.dart` has no window initialization and `pubspec.yaml` has
+    no window or preferences package.
+  - Chose a desktop-only `window_manager` plus `shared_preferences` design,
+    separate from the Drift content database.
+- Files created/modified:
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+
+### Planned next phases
+
+- Phase 25: implement the validated width/height store.
+- Phase 26: integrate startup, resize debounce, and close flushing.
+- Phase 27: test and document desktop behavior.
+
+### Phase 25: Persisted window state
+
+- **Status:** complete
+- Actions taken:
+  - Began implementation from the approved desktop-only design.
+  - Added `window_manager` and `shared_preferences`.
+  - Added validated `WindowSizePolicy` and a SharedPreferences-backed store.
+  - Added an injectable desktop window controller with debounced resize saves
+    and close-time flushing.
+  - Added focused policy, storage, and lifecycle tests; all 11 passed.
+- Files created/modified:
+  - `pubspec.yaml`
+  - `pubspec.lock`
+  - `lib/main.dart`
+  - `lib/core/window/window_size_store.dart`
+  - `lib/core/window/desktop_window_controller.dart`
+  - `lib/core/window/window_bootstrap.dart`
+  - `lib/core/window/window_bootstrap_io.dart`
+  - `lib/core/window/window_bootstrap_stub.dart`
+  - `test/core/window/window_size_store_test.dart`
+  - `test/core/window/desktop_window_controller_test.dart`
+
+### Phase 26: Integrate startup and resize lifecycle
+
+- **Status:** complete
+- Actions taken:
+  - Confirmed Flutter generated `window_manager` registration for Linux,
+    Windows, and macOS.
+  - Built and launched the Linux app with the new bootstrap.
+  - Verified clean runtime startup, the Flood window title, and persisted
+    width/height preference keys.
+  - Covered resize, maximize/fullscreen, relaunch, and close behavior with the
+    injected controller tests.
+
+### Phase 27: Verify and document window persistence
+
+- **Status:** complete
+- Actions taken:
+  - Added the desktop behavior section to `README.md`.
+  - Ran `dart format`, `flutter analyze`, `flutter test`, and
+    `flutter build linux --debug` successfully.
+  - Ran `flutter build web` successfully to verify the conditional no-op path.
+  - Full test result: 50 tests passed.
+  - Recorded that interactive Windows/macOS smoke testing is not available on
+    the current Linux-only development target.
+- Files created/modified:
+  - `README.md`
+  - `task_plan.md`
+  - `findings.md`
+  - `progress.md`
+
+## Session: 2026-09-11 — Design review
+
+Reviewed theme, shell, all screens and product brief. Preparing recommendations only. Existing uncommitted window-persistence work preserved.
+
+Completed `docs/design-review.md`, covering layout, colour, typography, reader, subscriptions, settings, states, accessibility, and implementation priorities. Verified recommendations against presentation source and model fields. No application code changed; no runtime visual validation or tests performed for this documentation-only review.
+
+Incorporated user preference for dark app chrome with an independently selectable white article canvas into the design review.
