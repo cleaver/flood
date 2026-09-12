@@ -4,28 +4,20 @@
 
 - Reviewed the theme, app shell, all presentation screens and dialogs, product
   brief, and article model.
-- Created [docs/design-review.md](docs/design-review.md), covering colour,
+- Created [docs/design-review.md](../../design-review.md), covering colour,
   layout, typography, reader presentation, subscriptions, settings,
   accessibility, and interaction states.
 - Checked recommendations against source and available model fields.
 - Incorporated the user's preference for app dark mode with an independently
   selectable white article background.
-- Recorded the user's clarification that this is exploratory work and that
-  implementation should wait while the ideas are considered.
-
-The source-based review is complete. Implementation began after the user's
-request; runtime visual validation remains outstanding.
+- Recorded the user's clarification that this was exploratory work.
 
 ## September 11, 2026 — Independent planning files
 
-- Recreated root-level `findings.md`, `progress.md`, and `task_plan.md` with
-  design-review content only after the previous combined history was archived.
-- Kept the existing detailed review and archived planning history intact.
+- Recreated root-level planning files with design-review content after the
+  previous combined history was archived.
+- Kept the detailed review and archived planning history intact.
 - Distinguished confirmed user preferences from proposed design details.
-
-## Current status
-
-Implementation is now in progress at the user's request.
 
 ## September 11, 2026 — Design implementation
 
@@ -57,3 +49,8 @@ Implementation is now in progress at the user's request.
 - Extended the widget test to assert dark-mode text before switching and the
   light reader text colour after choosing White article.
 - `flutter analyze` and the focused widget test pass.
+
+## Current status
+
+The review and implementation pass are complete. Runtime visual validation is
+optional, and future design discussion remains open.

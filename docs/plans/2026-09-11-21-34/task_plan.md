@@ -7,9 +7,9 @@ concrete recommendations across its design and layout.
 
 ## Current status
 
-Review complete; ideas under consideration. The user wants to ruminate before
-building. This file tracks the design discussion only and does not authorize
-implementation.
+Review and implementation pass complete; ideas remain under consideration.
+The user wants to ruminate before building further. This file tracks the
+design discussion and completed first pass only.
 
 ## Completed review
 
@@ -38,7 +38,7 @@ implementation.
 - Preserve dark mode as an app option.
 - Support an independently selectable white article surface in the proposed
   design, with suitable text and content colours.
-- Keep the work exploratory until the user chooses to proceed.
+- Keep the work exploratory until the user chooses to proceed further.
 - Palette, layout dimensions, appearance controls, and implementation sequence
   remain open for discussion.
 
@@ -54,6 +54,6 @@ These are discussion topics, not queued implementation tasks:
 
 ## Documents
 
-- [Detailed design review](docs/design-review.md)
+- [Detailed design review](../../design-review.md)
 - [Findings and preferences](findings.md)
 - [Review progress](progress.md)

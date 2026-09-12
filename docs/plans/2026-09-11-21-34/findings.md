@@ -8,7 +8,7 @@ Findings come from source inspection; no running UI or screenshots were
 inspected. Rendering, font metrics, hover behaviour, and contrast remain
 unvalidated.
 
-The detailed review is in [docs/design-review.md](docs/design-review.md).
+The detailed review is in [docs/design-review.md](../../design-review.md).
 
 ## Observations
 
@@ -30,8 +30,8 @@ The detailed review is in [docs/design-review.md](docs/design-review.md).
 - Keep app dark mode available.
 - Allow users to choose a white article background independently of app
   appearance, with appropriate dark text and reader content colours.
-- This remains idea gathering. The user wants to ruminate before building;
-  recommendations are not an approved implementation plan.
+- This began as idea gathering; implementation should remain limited until the
+  user chooses what to build next.
 
 ## Proposed direction — open for discussion
 
