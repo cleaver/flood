@@ -6,9 +6,10 @@ import 'package:flood/app_dependencies.dart';
 import 'package:flood/features/app_shell/presentation/app_shell.dart';
 
 class FloodApp extends StatefulWidget {
-  const FloodApp({super.key, this.dependencies});
+  const FloodApp({super.key, this.dependencies, this.themeMode});
 
   final AppDependencies? dependencies;
+  final ThemeMode? themeMode;
 
   @override
   State<FloodApp> createState() => _FloodAppState();
@@ -72,7 +73,7 @@ class _FloodAppState extends State<FloodApp> {
         ),
         useMaterial3: true,
       ),
-      themeMode: ThemeMode.system,
+      themeMode: widget.themeMode ?? ThemeMode.system,
       home: AppShell(
         feedRepository: _dependencies.feedRepository,
         articleRepository: _dependencies.articleRepository,

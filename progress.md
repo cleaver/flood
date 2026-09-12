@@ -45,3 +45,15 @@ Implementation is now in progress at the user's request.
 - Added an explicit `ColoredBox` around the reader content using the selected
   reader theme surface colour.
 - `flutter analyze` and the article widget test pass.
+
+## September 11, 2026 — Dark app / white reader text fix
+
+- Reproduced the reported combination in the widget test with a dark app theme.
+- Found that `HtmlWidget` caches its inherited text style across the appearance
+  toggle, so the canvas became white while body text retained the light dark
+  theme colour.
+- Added an appearance key to rebuild the HTML renderer and supplied an explicit
+  reader body style from the active reader theme.
+- Extended the widget test to assert dark-mode text before switching and the
+  light reader text colour after choosing White article.
+- `flutter analyze` and the focused widget test pass.

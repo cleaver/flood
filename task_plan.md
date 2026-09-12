@@ -30,6 +30,8 @@ implementation.
   article options, keeping the article canvas independent from app chrome.
 - [x] Format, analyze, and run the complete test suite.
 - [x] Fix the reader surface so White article paints an opaque white canvas.
+- [x] Fix cached HTML text styles when switching from dark app to white reader.
+- [x] Add a regression assertion for dark app + white article text colours.
 
 ## Constraints and preferences
 

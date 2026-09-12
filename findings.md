@@ -58,3 +58,13 @@ navigation: [Apple materials guidance](https://developer.apple.com/design/human-
 Direct guideline page reads required JavaScript, so the review did not rely on
 unavailable page bodies. Restrained optional translucency is a design proposal;
 recreating glass effects is not a requirement.
+
+## Dark app / white reader diagnosis
+
+- The reader `Theme` changed the canvas and Flutter text widgets, but
+  `HtmlWidget` caches its resolved inherited `TextStyle` in its state.
+- Toggling from a dark app to White article therefore left HTML body text with
+  the dark theme's light foreground colour.
+- The fix keys the HTML renderer by reader appearance and passes an explicit
+  body style from the active reader theme. A widget regression test covers the
+  dark app + white article transition.

@@ -29,7 +29,9 @@ void main() {
       articleRepository: articles,
     );
 
-    await tester.pumpWidget(FloodApp(dependencies: dependencies));
+    await tester.pumpWidget(
+      FloodApp(dependencies: dependencies, themeMode: ThemeMode.dark),
+    );
     await tester.pumpAndSettle();
     expect(find.text('No articles here yet.'), findsOneWidget);
 
@@ -51,6 +53,25 @@ void main() {
     expect(find.text('River Writer · Flood Journal'), findsOneWidget);
     final reader = tester.widget<HtmlWidget>(find.byType(HtmlWidget));
     expect(reader.html, contains('<h2>Readable content</h2>'));
+    expect(
+      reader.textStyle?.color,
+      ColorScheme.fromSeed(
+        seedColor: const Color(0xFF66ADFF),
+        brightness: Brightness.dark,
+      ).onSurface,
+    );
+    await tester.tap(find.byTooltip('Article appearance'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('White article'));
+    await tester.pumpAndSettle();
+    final whiteReader = tester.widget<HtmlWidget>(find.byType(HtmlWidget));
+    expect(
+      whiteReader.textStyle?.color,
+      ColorScheme.fromSeed(
+        seedColor: const Color(0xFF0066CC),
+        brightness: Brightness.light,
+      ).onSurface,
+    );
     await tester.tap(find.byTooltip('Save article'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));

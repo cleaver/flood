@@ -177,7 +177,12 @@ class _ArticlePageState extends State<ArticlePage> {
                     else
                       HtmlWidget(
                         content,
+                        key: ValueKey(_whiteArticle),
                         baseUrl: article.url,
+                        textStyle: readerTheme.textTheme.bodyLarge?.copyWith(
+                          color: readerTheme.colorScheme.onSurface,
+                          height: 1.6,
+                        ),
                         onTapUrl: (value) async {
                           final url = Uri.tryParse(value);
                           if (url == null) return false;
