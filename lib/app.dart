@@ -33,20 +33,42 @@ class _FloodAppState extends State<FloodApp> {
 
   @override
   Widget build(BuildContext context) {
+    const lightPrimary = Color(0xFF0066CC);
+    const darkPrimary = Color(0xFF66ADFF);
     return MaterialApp(
       title: 'Flood',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF315E8A),
+          seedColor: lightPrimary,
           brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF4F5F7),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFF4F5F7),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+        ),
+        dividerTheme: const DividerThemeData(
+          color: Color(0xFFE4E6EA),
+          space: 1,
         ),
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF9CCBFF),
+          seedColor: darkPrimary,
           brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: const Color(0xFF111214),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF111214),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+        ),
+        dividerTheme: const DividerThemeData(
+          color: Color(0xFF33363B),
+          space: 1,
         ),
         useMaterial3: true,
       ),

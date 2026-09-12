@@ -13,8 +13,8 @@
 - Recorded the user's clarification that this is exploratory work and that
   implementation should wait while the ideas are considered.
 
-The source-based review is complete. No app code was changed for the review;
-no runtime visual validation or application tests were performed for it.
+The source-based review is complete. Implementation began after the user's
+request; runtime visual validation remains outstanding.
 
 ## September 11, 2026 — Independent planning files
 
@@ -25,5 +25,23 @@ no runtime visual validation or application tests were performed for it.
 
 ## Current status
 
-Recommendations are available for discussion. No design implementation is in
-progress or authorized by this planning record.
+Implementation is now in progress at the user's request.
+
+## September 11, 2026 — Design implementation
+
+- Fast-forwarded `main` from upstream (`289c981`), including macOS entitlement
+  fixes.
+- Added explicit light/dark surface, app bar, and divider styling.
+- Renamed the timeline heading to “Timeline” and added calmer row padding.
+- Added an article appearance bottom sheet with a white article canvas option;
+  app chrome remains on the app theme.
+- `flutter analyze` passes and all tests pass.
+
+## September 11, 2026 — White reader background fix
+
+- Diagnosed the reported Linux appearance issue: the nested reader theme changed
+  text styling, but the outer `Scaffold` still painted the app background and
+  the transparent list revealed it.
+- Added an explicit `ColoredBox` around the reader content using the selected
+  reader theme surface colour.
+- `flutter analyze` and the article widget test pass.

@@ -69,7 +69,7 @@ class _TimelinePageState extends State<TimelinePage> {
             : null;
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Today'),
+            title: const Text('Timeline'),
             actions: [
               if (feeds.isNotEmpty)
                 PopupMenuButton<String>(
@@ -180,6 +180,7 @@ class _ArticleTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       onTap: onTap,
       leading: Row(
         mainAxisSize: MainAxisSize.min,

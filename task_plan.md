@@ -21,6 +21,16 @@ implementation.
 - [x] Record evidence limitations and distinguish proposals from decisions.
 - [x] Restore independent design-only planning files after reorganization.
 
+## Implementation — 2026-09-11
+
+- [x] Pull upstream changes with fast-forward only.
+- [x] Add explicit calm light/dark surface and divider theme tokens.
+- [x] Rename the misleading Timeline heading from “Today”.
+- [x] Add a reader appearance sheet with Follow app appearance and White
+  article options, keeping the article canvas independent from app chrome.
+- [x] Format, analyze, and run the complete test suite.
+- [x] Fix the reader surface so White article paints an opaque white canvas.
+
 ## Constraints and preferences
 
 - Preserve dark mode as an app option.
