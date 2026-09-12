@@ -30,6 +30,8 @@ Flood currently supports a resilient multi-feed reading slice:
 7. Render Markdown-like feed content with the same HTML reader, while leaving
    rich HTML untouched; open the original URL and save an article from a
    timeline row or the reader.
+8. Read articles in a constrained editorial column with selectable serif or
+   sans-serif prose; Flood remembers the font pairing and reading position.
 
 Install dependencies and run the app with:
 
