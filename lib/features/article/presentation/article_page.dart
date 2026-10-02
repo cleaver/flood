@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:ui' show PointerDeviceKind;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -28,7 +31,15 @@ class ArticlePage extends StatefulWidget {
 }
 
 class _ArticlePageState extends State<ArticlePage> {
+  static const _desktopNavigationChannel = MethodChannel(
+    'flood/desktop_navigation',
+  );
+
   bool _whiteArticle = false;
+  bool _isPopping = false;
+  bool _isTrackpadPan = false;
+  Offset _panOffset = Offset.zero;
+  Offset _panStartPosition = Offset.zero;
   ReaderFontPairing _fontPairing = ReaderFontPairing.editorial;
   bool _fontPairingManuallySelected = false;
   late Stream<ArticleWithState?> _articleStream;
@@ -43,6 +54,9 @@ class _ArticlePageState extends State<ArticlePage> {
     super.initState();
     _articleStream = widget.repository.watchArticle(widget.articleId);
     _loadPreferences();
+    if (_usesNativeBackSignal) {
+      _desktopNavigationChannel.setMethodCallHandler(_handleNativeBackSignal);
+    }
   }
 
   @override
@@ -225,6 +239,9 @@ class _ArticlePageState extends State<ArticlePage> {
 
   @override
   void dispose() {
+    if (_usesNativeBackSignal) {
+      _desktopNavigationChannel.setMethodCallHandler(null);
+    }
     _scrollSaveTimer?.cancel();
     final controller = _scrollController;
     if (controller?.hasClients ?? false) {
@@ -234,168 +251,259 @@ class _ArticlePageState extends State<ArticlePage> {
     super.dispose();
   }
 
+  bool get _isDesktop => switch (defaultTargetPlatform) {
+    TargetPlatform.linux ||
+    TargetPlatform.macOS ||
+    TargetPlatform.windows => true,
+    _ => false,
+  };
+
+  bool get _usesNativeBackSignal =>
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.windows;
+
+  bool get _usesTrackpadPan =>
+      defaultTargetPlatform == TargetPlatform.linux ||
+      defaultTargetPlatform == TargetPlatform.windows;
+
+  Future<Object?> _handleNativeBackSignal(MethodCall call) async {
+    if (call.method == 'backGesture') await _requestBackNavigation();
+    return null;
+  }
+
+  Future<void> _requestBackNavigation() async {
+    if (!_isDesktop || _isPopping) return;
+    final route = ModalRoute.of(context);
+    if (route?.isCurrent != true || route?.canPop != true) return;
+
+    _isPopping = true;
+    try {
+      await Navigator.of(context).maybePop();
+    } finally {
+      _isPopping = false;
+    }
+  }
+
+  void _onPanStart(DragStartDetails details) {
+    _isTrackpadPan =
+        _usesTrackpadPan && details.kind == PointerDeviceKind.trackpad;
+    _panOffset = Offset.zero;
+    _panStartPosition = details.globalPosition;
+  }
+
+  void _onPanUpdate(DragUpdateDetails details) {
+    if (_isTrackpadPan) {
+      _panOffset = details.globalPosition - _panStartPosition;
+    }
+  }
+
+  void _onPanEnd(DragEndDetails details) {
+    final shouldGoBack =
+        _isTrackpadPan &&
+        _panOffset.dx >= 100 &&
+        _panOffset.dx >= _panOffset.dy.abs() * 1.5;
+    _resetPan();
+    if (shouldGoBack) unawaited(_requestBackNavigation());
+  }
+
+  void _resetPan() {
+    _isTrackpadPan = false;
+    _panOffset = Offset.zero;
+    _panStartPosition = Offset.zero;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<ArticleWithState?>(
-      stream: _articleStream,
-      builder: (context, snapshot) {
-        final item = snapshot.data;
-        if (snapshot.hasError) {
-          return const Scaffold(
-            body: Center(child: Text('Could not load this article.')),
-          );
-        }
-        if (item == null) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    final page = Focus(
+      autofocus: true,
+      child: GestureDetector(
+        onPanStart: _onPanStart,
+        onPanUpdate: _onPanUpdate,
+        onPanEnd: _onPanEnd,
+        onPanCancel: _resetPan,
+        child: StreamBuilder<ArticleWithState?>(
+          stream: _articleStream,
+          builder: (context, snapshot) {
+            final item = snapshot.data;
+            if (snapshot.hasError) {
+              return const Scaffold(
+                body: Center(child: Text('Could not load this article.')),
+              );
+            }
+            if (item == null) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-        final article = item.article;
-        final source = article.contentHtml ?? article.summaryHtml;
-        if (source != _sourceContent) {
-          _sourceContent = source;
-          final formatted = const ArticleContentFormatter().format(source);
-          _readerContent = formatted == null
-              ? null
-              : const ReaderHtmlNormalizer().normalize(formatted);
-        }
-        final content = _readerContent;
-        final readerTheme = ReaderStyle.articleTheme(
-          Theme.of(context),
-          white: _whiteArticle,
-        );
-        final style = ReaderStyle(readerTheme, _fontPairing);
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(
-              item.feedTitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            actions: [
-              IconButton(
-                icon: Icon(
-                  item.state.isStarred ? Icons.star : Icons.star_outline,
+            final article = item.article;
+            final source = article.contentHtml ?? article.summaryHtml;
+            if (source != _sourceContent) {
+              _sourceContent = source;
+              final formatted = const ArticleContentFormatter().format(source);
+              _readerContent = formatted == null
+                  ? null
+                  : const ReaderHtmlNormalizer().normalize(formatted);
+            }
+            final content = _readerContent;
+            final readerTheme = ReaderStyle.articleTheme(
+              Theme.of(context),
+              white: _whiteArticle,
+            );
+            final style = ReaderStyle(readerTheme, _fontPairing);
+            return Scaffold(
+              appBar: AppBar(
+                title: Text(
+                  item.feedTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                onPressed: () => widget.repository.setStarred(
-                  article.id,
-                  isStarred: !item.state.isStarred,
-                ),
-                tooltip: item.state.isStarred
-                    ? 'Remove from saved'
-                    : 'Save article',
+                actions: [
+                  IconButton(
+                    icon: Icon(
+                      item.state.isStarred ? Icons.star : Icons.star_outline,
+                    ),
+                    onPressed: () => widget.repository.setStarred(
+                      article.id,
+                      isStarred: !item.state.isStarred,
+                    ),
+                    tooltip: item.state.isStarred
+                        ? 'Remove from saved'
+                        : 'Save article',
+                  ),
+                  if (article.url case final url?)
+                    IconButton(
+                      icon: const Icon(Icons.open_in_browser_outlined),
+                      onPressed: () => _openUrl(context, url),
+                      tooltip: 'Open original article',
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.text_format),
+                    onPressed: _chooseAppearance,
+                    tooltip: 'Article appearance',
+                  ),
+                ],
               ),
-              if (article.url case final url?)
-                IconButton(
-                  icon: const Icon(Icons.open_in_browser_outlined),
-                  onPressed: () => _openUrl(context, url),
-                  tooltip: 'Open original article',
-                ),
-              IconButton(
-                icon: const Icon(Icons.text_format),
-                onPressed: _chooseAppearance,
-                tooltip: 'Article appearance',
-              ),
-            ],
-          ),
-          body: Theme(
-            data: readerTheme,
-            child: DefaultTextStyle(
-              style: style.body,
-              child: DefaultSelectionStyle(
-                selectionColor: readerTheme.colorScheme.primary.withValues(
-                  alpha: .25,
-                ),
-                cursorColor: readerTheme.colorScheme.primary,
-                child: SelectionArea(
-                  child: ColoredBox(
-                    color: readerTheme.scaffoldBackgroundColor,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final narrow = constraints.maxWidth < 720;
-                        final side =
-                            ((constraints.maxWidth - ReaderStyle.columnWidth) /
-                                    2)
-                                .clamp(20.0, double.infinity);
-                        return ListView(
-                          key: PageStorageKey('reader-${article.id}'),
-                          controller: _controllerFor(item),
-                          padding: EdgeInsets.fromLTRB(
-                            side,
-                            narrow ? 28 : 48,
-                            side,
-                            64,
-                          ),
-                          children: [
-                            Text(
-                              article.title.isEmpty
-                                  ? 'Untitled article'
-                                  : article.title,
-                              style: style.title(narrow: narrow),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              [
-                                if (article.author != null) article.author!,
-                                item.feedTitle,
-                              ].join(' · '),
-                              style: style.metadata,
-                            ),
-                            const SizedBox(height: 32),
-                            if (article.isRemoved)
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: Tooltip(
-                                  message: 'Removed from feed',
-                                  child: Icon(
-                                    Icons.remove_circle_outline,
-                                    semanticLabel: 'Removed from feed',
-                                    color: readerTheme
-                                        .colorScheme
-                                        .onSurfaceVariant,
+              body: Theme(
+                data: readerTheme,
+                child: DefaultTextStyle(
+                  style: style.body,
+                  child: DefaultSelectionStyle(
+                    selectionColor: readerTheme.colorScheme.primary.withValues(
+                      alpha: .25,
+                    ),
+                    cursorColor: readerTheme.colorScheme.primary,
+                    child: SelectionArea(
+                      child: ColoredBox(
+                        color: readerTheme.scaffoldBackgroundColor,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final narrow = constraints.maxWidth < 720;
+                            final side =
+                                ((constraints.maxWidth -
+                                            ReaderStyle.columnWidth) /
+                                        2)
+                                    .clamp(20.0, double.infinity);
+                            return ListView(
+                              key: PageStorageKey('reader-${article.id}'),
+                              controller: _controllerFor(item),
+                              padding: EdgeInsets.fromLTRB(
+                                side,
+                                narrow ? 28 : 48,
+                                side,
+                                64,
+                              ),
+                              children: [
+                                Text(
+                                  article.title.isEmpty
+                                      ? 'Untitled article'
+                                      : article.title,
+                                  style: style.title(narrow: narrow),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  [
+                                    if (article.author != null) article.author!,
+                                    item.feedTitle,
+                                  ].join(' · '),
+                                  style: style.metadata,
+                                ),
+                                const SizedBox(height: 32),
+                                if (article.isRemoved)
+                                  ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: Tooltip(
+                                      message: 'Removed from feed',
+                                      child: Icon(
+                                        Icons.remove_circle_outline,
+                                        semanticLabel: 'Removed from feed',
+                                        color: readerTheme
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                      ),
+                                    ),
+                                    title: const Text('Removed from feed'),
+                                    subtitle: const Text(
+                                      'This entry is no longer published by this feed.',
+                                    ),
                                   ),
-                                ),
-                                title: const Text('Removed from feed'),
-                                subtitle: const Text(
-                                  'This entry is no longer published by this feed.',
-                                ),
-                              ),
-                            if (article.isRemoved) const SizedBox(height: 16),
-                            if (content == null || content.trim().isEmpty)
-                              const Text(
-                                'This feed did not include article content.',
-                              )
-                            else
-                              HtmlWidget(
-                                content,
-                                key: ValueKey((
-                                  _whiteArticle,
-                                  _fontPairing,
-                                  readerTheme.brightness,
-                                )),
-                                baseUrl: article.url,
-                                textStyle: style.body,
-                                customStylesBuilder: (element) =>
-                                    style.htmlStyles(element.localName),
-                                onTapUrl: (value) async {
-                                  final url = Uri.tryParse(value);
-                                  if (url == null) return false;
-                                  await _openUrl(context, url);
-                                  return true;
-                                },
-                              ),
-                          ],
-                        );
-                      },
+                                if (article.isRemoved)
+                                  const SizedBox(height: 16),
+                                if (content == null || content.trim().isEmpty)
+                                  const Text(
+                                    'This feed did not include article content.',
+                                  )
+                                else
+                                  HtmlWidget(
+                                    content,
+                                    key: ValueKey((
+                                      _whiteArticle,
+                                      _fontPairing,
+                                      readerTheme.brightness,
+                                    )),
+                                    baseUrl: article.url,
+                                    textStyle: style.body,
+                                    customStylesBuilder: (element) =>
+                                        style.htmlStyles(element.localName),
+                                    onTapUrl: (value) async {
+                                      final url = Uri.tryParse(value);
+                                      if (url == null) return false;
+                                      await _openUrl(context, url);
+                                      return true;
+                                    },
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-        );
+            );
+          },
+        ),
+      ),
+    );
+
+    if (!_isDesktop) return page;
+
+    return Actions(
+      actions: {
+        DismissIntent: CallbackAction<DismissIntent>(
+          onInvoke: (_) {
+            unawaited(_requestBackNavigation());
+            return null;
+          },
+        ),
       },
+      child: Shortcuts(
+        shortcuts: const {
+          SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+        },
+        child: page,
+      ),
     );
   }
 }

@@ -1,8 +1,17 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <windowsx.h>
+
+#include <flutter/method_channel.h>
+#include <flutter/standard_method_codec.h>
 
 #include "flutter/generated_plugin_registrant.h"
+
+namespace {
+constexpr char kDesktopNavigationChannel[] = "flood/desktop_navigation";
+constexpr char kBackGestureMethod[] = "backGesture";
+}  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -59,6 +68,17 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     if (result) {
       return *result;
     }
+  }
+
+  if (flutter_controller_ && message == WM_APPCOMMAND &&
+      GET_APPCOMMAND_LPARAM(lparam) == APPCOMMAND_BROWSER_BACKWARD) {
+    flutter::MethodChannel<> channel(
+        flutter_controller_->engine()->messenger(),
+        kDesktopNavigationChannel,
+        &flutter::StandardMethodCodec::GetInstance());
+    channel.InvokeMethod(kBackGestureMethod,
+                         std::make_unique<flutter::EncodableValue>());
+    return TRUE;
   }
 
   switch (message) {

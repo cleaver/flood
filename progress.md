@@ -40,3 +40,14 @@
 
 Implementation is complete. A manual desktop visual pass remains because the
 headless full-frame raster capture path is unavailable in this runner.
+
+### 2026-10-01 — Desktop reader back navigation
+
+- 2026-10-01: Read repository instructions, design guide, article page, and dependency declarations. Working tree was clean.
+- Inspected timeline navigation, existing integration-style widget fixture, desktop platform interface, macOS runner, and installed Flutter embedder source.
+- Checked official Flutter, Apple, and Microsoft input documentation. Finalized implementation sequence, red/green tests, platform investigation gates, and manual verification matrix.
+- Added Escape-based desktop route dismissal, trackpad back pans on Linux/Windows, and native semantic back gesture paths on macOS/Windows.
+- Extended the integration widget test across Android, iOS, Linux, macOS, and Windows; checked modal Escape priority, wrong/short/diagonal/vertical swipes, mouse drags, native channel back, and Escape route return. Focused tests pass across all five variants.
+- Verification: `dart format lib test`, `flutter analyze`, `flutter test` (54 tests), `flutter build linux --debug`, and `git diff --check` all pass.
+- Not visually checked on real desktop hardware. The Linux runner builds here; macOS and Windows native runner code needs host-platform builds and configured trackpad testing.
+- 2026-10-02: Re-ran the full suite, analysis, Linux build, formatting, and diff whitespace check after final gesture-threshold changes; all passed.

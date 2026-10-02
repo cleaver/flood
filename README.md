@@ -62,6 +62,12 @@ height and restores them on the next launch. The first-launch fallback is
 1280×720, with a 640×480 minimum. Maximized and fullscreen bounds are not saved;
 mobile and web builds do not apply desktop window persistence.
 
+On desktop, Escape returns from the article reader to the timeline. Linux and
+Windows also accept a rightward trackpad pan; macOS uses the native swipe event
+when the OS delivers its configured page-navigation gesture. Windows also
+accepts the OS browser-back command. The reader ignores these inputs when its
+route is covered by another page.
+
 ## Resilience behavior
 
 - Flood opens its local database before any refresh, so previously downloaded
