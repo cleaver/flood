@@ -51,8 +51,25 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('First article'), findsOneWidget);
+      final usesHorizontalSwipeTransition = switch (defaultTargetPlatform) {
+        TargetPlatform.linux ||
+        TargetPlatform.macOS ||
+        TargetPlatform.windows => true,
+        _ => false,
+      };
       await tester.tap(find.text('First article'));
-      await tester.pumpAndSettle();
+      if (usesHorizontalSwipeTransition) {
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 120));
+        final enteringArticle = find.text('River Writer · Flood Journal');
+        expect(enteringArticle, findsOneWidget);
+        final intermediateLeft = tester.getTopLeft(enteringArticle).dx;
+        await tester.pumpAndSettle();
+        final settledLeft = tester.getTopLeft(enteringArticle).dx;
+        expect(intermediateLeft, greaterThan(settledLeft + 20));
+      } else {
+        await tester.pumpAndSettle();
+      }
 
       expect(find.text('River Writer · Flood Journal'), findsOneWidget);
       final reader = tester.widget<HtmlWidget>(find.byType(HtmlWidget));

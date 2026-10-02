@@ -1,3 +1,5 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 
 import 'package:flood/core/models/article_query.dart';
@@ -41,14 +43,16 @@ class _TimelinePageState extends State<TimelinePage> {
   Future<void> _openArticle(ArticleWithState item) async {
     await widget.articleRepository.markRead(item.article.id, isRead: true);
     if (!mounted) return;
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => ArticlePage(
-          articleId: item.article.id,
-          repository: widget.articleRepository,
-        ),
-      ),
+    Widget buildArticlePage(BuildContext _) => ArticlePage(
+      articleId: item.article.id,
+      repository: widget.articleRepository,
     );
+    final Route<void> route = switch (defaultTargetPlatform) {
+      TargetPlatform.linux || TargetPlatform.macOS || TargetPlatform.windows =>
+        CupertinoPageRoute<void>(builder: buildArticlePage),
+      _ => MaterialPageRoute<void>(builder: buildArticlePage),
+    };
+    await Navigator.of(context).push<void>(route);
   }
 
   Future<void> _toggleStar(ArticleWithState item) {
