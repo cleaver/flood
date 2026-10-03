@@ -84,6 +84,40 @@ class DriftArticleRepository implements ArticleRepository {
         .write(ArticleStateRowsCompanion(scrollOffset: Value(offset)));
   }
 
+  @override
+  Future<void> deleteArticlesBefore(DateTime cutoff) async {
+    await _database.transaction(() async {
+      final expired =
+          await (_database.select(_database.articleRows)..where(
+                (article) =>
+                    article.fetchedAt.isSmallerThanValue(cutoff.toUtc()),
+              ))
+              .get();
+      if (expired.isEmpty) return;
+
+      final expiredIds = expired.map((article) => article.id).toList();
+      final starred =
+          await (_database.select(_database.articleStateRows)..where(
+                (state) =>
+                    state.articleId.isIn(expiredIds) &
+                    state.isStarred.equals(true),
+              ))
+              .get();
+      final starredIds = starred.map((state) => state.articleId).toSet();
+      final deletableIds = expiredIds
+          .where((id) => !starredIds.contains(id))
+          .toList(growable: false);
+      if (deletableIds.isEmpty) return;
+
+      await (_database.delete(
+        _database.articleStateRows,
+      )..where((state) => state.articleId.isIn(deletableIds))).go();
+      await (_database.delete(
+        _database.articleRows,
+      )..where((article) => article.id.isIn(deletableIds))).go();
+    });
+  }
+
   JoinedSelectStatement<HasResultSet, dynamic> _baseQuery() {
     return _database.select(_database.articleRows).join([
       innerJoin(

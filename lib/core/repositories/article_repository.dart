@@ -11,4 +11,6 @@ abstract interface class ArticleRepository {
   Future<void> setStarred(String id, {required bool isStarred});
 
   Future<void> saveScrollOffset(String id, double offset);
+
+  Future<void> deleteArticlesBefore(DateTime cutoff);
 }

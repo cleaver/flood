@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -134,6 +135,59 @@ void main() {
     expect(unread, isEmpty);
     expect(starred.single.article.id, article.article.id);
   });
+
+  test(
+    'retention removes expired articles but preserves saved state',
+    () async {
+      source.results.add(_loaded(title: 'Flood Journal', etag: '"v1"'));
+      final feed = await feeds.subscribe(Uri.parse('https://example.com/feed'));
+      final initial =
+          (await articles.watchArticles(const ArticleQuery()).first).single;
+      final cutoff = DateTime.utc(2026, 9, 1);
+      final expiredAt = cutoff.subtract(const Duration(seconds: 1));
+      await articles.setStarred(initial.article.id, isStarred: true);
+      await articles.markRead(initial.article.id, isRead: true);
+      await articles.saveScrollOffset(initial.article.id, 84);
+      await (database.update(database.articleRows)
+            ..where((article) => article.id.equals(initial.article.id)))
+          .write(ArticleRowsCompanion(fetchedAt: Value(expiredAt)));
+      await database
+          .into(database.articleRows)
+          .insert(
+            ArticleRowsCompanion.insert(
+              id: 'expired-unstarred',
+              feedId: feed.id,
+              sourceKey: 'expired-unstarred',
+              title: 'Expired article',
+              fetchedAt: expiredAt,
+            ),
+          );
+      await database
+          .into(database.articleRows)
+          .insert(
+            ArticleRowsCompanion.insert(
+              id: 'recent-unstarred',
+              feedId: feed.id,
+              sourceKey: 'recent-unstarred',
+              title: 'Recent article',
+              fetchedAt: cutoff.add(const Duration(seconds: 1)),
+            ),
+          );
+
+      await articles.deleteArticlesBefore(cutoff);
+
+      final retained = await articles.watchArticles(const ArticleQuery()).first;
+      expect(
+        retained.map((item) => item.article.title),
+        containsAll(['First article', 'Recent article']),
+      );
+      expect(retained, hasLength(2));
+      final saved = await articles.watchArticle(initial.article.id).first;
+      expect(saved!.state.isStarred, isTrue);
+      expect(saved.state.isRead, isTrue);
+      expect(saved.state.scrollOffset, 84);
+    },
+  );
 
   test(
     'deduplicates matching article URLs across feeds and syncs their state',

@@ -55,6 +55,48 @@ flutter test
 
 The Android release manifest includes network access for feed refreshes.
 
+## Desktop builds and installation
+
+The app icon source is [assets/icons/flood.svg](assets/icons/flood.svg). Linux
+embeds the SVG in the native runner and includes a desktop launcher in the build
+bundle. macOS uses PNGs generated from the same SVG in its Xcode asset catalog.
+
+With Flutter and [Just](https://just.systems/) installed, run this on Linux or
+macOS to build a release and install it for your user account:
+
+```sh
+just install
+```
+
+Explicit recipes are `just install-linux` and `just install-macos`. Each builds
+on its own platform. `just build-linux` and `just build-macos` build without
+installing. Run `just` to list the recipes.
+
+On **Linux**, install `desktop-file-utils` first. Installation copies the SVG
+into your user icon theme, installs a `.desktop` entry, and refreshes the icon
+cache when that tool is available. This covers the launcher and Alt-Tab on
+Wayland. The launcher points at `build/linux/x64/release/bundle/flood`; keep the
+whole bundle together and rerun installation if you move the project. You can
+also register another bundle with `./linux/install-desktop.sh /path/to/bundle`.
+
+On **macOS**, the Flutter macOS toolchain must be configured, including Xcode.
+Installation copies the complete release app to `~/Applications/Flood.app`,
+including its icon and frameworks. Reinstalling updates that copy and removes
+obsolete files within it. To use a different Applications directory, set
+`FLOOD_APPLICATIONS_DIR` when running `just install-macos`.
+
+Quit Flood and reopen it from the installed launcher or app after installation
+so its desktop icon updates. These recipes install local release builds.
+
+After changing the SVG, run `just icons-macos` and commit the updated PNG assets.
+This regeneration command needs `rsvg-convert` from librsvg (`brew install
+librsvg` on macOS); normal builds use the committed PNGs. Windows, Android,
+iOS, and web retain their existing icons.
+
+The desktop installer checks run with `just test-tools` (Python 3, Just,
+`desktop-file-utils`, and rsync). They use temporary fixture bundles and do not
+change your installed app.
+
 ## Desktop window behavior
 
 On Linux, macOS, and Windows, Flood remembers the last normal window width and

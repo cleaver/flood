@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Flood</title>
+  <desc>Three white rapids flowing across a blue rounded square.</desc>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#0066cc"/>
+  <g fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M56 88h52c16 0 16-24 36-24s20 24 36 24h20"/>
+    <path d="M48 132h28c16 0 16-24 36-24s20 24 36 24h60"/>
+    <path d="M56 176h68c16 0 16-24 36-24s20 24 36 24h4"/>
+  </g>
+</svg>

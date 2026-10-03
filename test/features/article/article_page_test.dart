@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,6 +9,7 @@ import 'package:flood/core/models/article_query.dart';
 import 'package:flood/core/models/article_state.dart';
 import 'package:flood/core/models/article_with_state.dart';
 import 'package:flood/core/repositories/article_repository.dart';
+import 'package:flood/core/settings/app_settings_store.dart';
 import 'package:flood/features/article/presentation/article_page.dart';
 
 const _prose = 'A quiet place to read and think.';
@@ -86,6 +88,45 @@ void main() {
       isNot(const Color(0xFFFFFF00)),
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('opens original links with the saved in-app browser preference', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'settings.originalLinkOpening': OriginalLinkOpening.inAppBrowser.name,
+    });
+    const channel = MethodChannel('plugins.flutter.io/url_launcher');
+    final calls = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      calls.add(call);
+      return true;
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ArticlePage(
+          articleId: 'one',
+          repository: _Articles(hasUrl: true),
+          settings: const SharedPreferencesAppSettingsStore(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Open original article'));
+    await tester.pumpAndSettle();
+
+    expect(calls, hasLength(1));
+    expect(calls.single.method, 'launch');
+    expect((calls.single.arguments as Map)['useWebView'], isTrue);
   });
 
   testWidgets('restores and saves the article scroll position', (tester) async {
@@ -195,12 +236,14 @@ class _Articles implements ArticleRepository {
     this.longContent = false,
     this.longTitle = false,
     this.emptyContent = false,
+    this.hasUrl = false,
   });
 
   final double initialScrollOffset;
   final bool longContent;
   final bool longTitle;
   final bool emptyContent;
+  final bool hasUrl;
   final savedOffsets = <double>[];
 
   @override
@@ -213,6 +256,7 @@ class _Articles implements ArticleRepository {
         title: longTitle
             ? 'A very long article title that should wrap gently across several lines without clipping'
             : 'A slower morning',
+        url: hasUrl ? Uri.parse('https://example.com/original') : null,
         author: 'River Writer',
         fetchedAt: DateTime(2026),
         contentHtml: emptyContent
@@ -241,4 +285,7 @@ class _Articles implements ArticleRepository {
   Future<void> saveScrollOffset(String id, double offset) async {
     savedOffsets.add(offset);
   }
+
+  @override
+  Future<void> deleteArticlesBefore(DateTime cutoff) async {}
 }

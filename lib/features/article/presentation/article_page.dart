@@ -12,6 +12,7 @@ import 'package:flood/core/content/reader_html_normalizer.dart';
 import 'package:flood/core/models/article_with_state.dart';
 import 'package:flood/core/reader/reader_preferences_store.dart';
 import 'package:flood/core/repositories/article_repository.dart';
+import 'package:flood/core/settings/app_settings_store.dart';
 import 'package:flood/features/article/presentation/reader_style.dart';
 
 class ArticlePage extends StatefulWidget {
@@ -19,12 +20,14 @@ class ArticlePage extends StatefulWidget {
     required this.articleId,
     required this.repository,
     this.preferences = const SharedPreferencesReaderPreferencesStore(),
+    this.settings = const SharedPreferencesAppSettingsStore(),
     super.key,
   });
 
   final String articleId;
   final ArticleRepository repository;
   final ReaderPreferencesStore preferences;
+  final AppSettingsStore settings;
 
   @override
   State<ArticlePage> createState() => _ArticlePageState();
@@ -189,7 +192,16 @@ class _ArticlePageState extends State<ArticlePage> {
   }
 
   Future<void> _openUrl(BuildContext context, Uri uri) async {
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    var mode = LaunchMode.externalApplication;
+    try {
+      final opening = await widget.settings.loadOriginalLinkOpening();
+      if (opening == OriginalLinkOpening.inAppBrowser) {
+        mode = LaunchMode.inAppBrowserView;
+      }
+    } on Object {
+      // Preserve the system browser path if preferences cannot be read.
+    }
+    final launched = await launchUrl(uri, mode: mode);
     if (!launched && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open this link.')),

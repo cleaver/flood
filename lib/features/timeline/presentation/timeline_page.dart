@@ -8,17 +8,20 @@ import 'package:flood/core/models/feed.dart';
 import 'package:flood/core/models/feed_refresh_result.dart';
 import 'package:flood/core/repositories/article_repository.dart';
 import 'package:flood/core/repositories/feed_repository.dart';
+import 'package:flood/core/settings/app_settings_store.dart';
 import 'package:flood/features/article/presentation/article_page.dart';
 
 class TimelinePage extends StatefulWidget {
   const TimelinePage({
     required this.feedRepository,
     required this.articleRepository,
+    this.settings = const SharedPreferencesAppSettingsStore(),
     super.key,
   });
 
   final FeedRepository feedRepository;
   final ArticleRepository articleRepository;
+  final AppSettingsStore settings;
 
   @override
   State<TimelinePage> createState() => _TimelinePageState();
@@ -46,6 +49,7 @@ class _TimelinePageState extends State<TimelinePage> {
     Widget buildArticlePage(BuildContext _) => ArticlePage(
       articleId: item.article.id,
       repository: widget.articleRepository,
+      settings: widget.settings,
     );
     final Route<void> route = switch (defaultTargetPlatform) {
       TargetPlatform.linux || TargetPlatform.macOS || TargetPlatform.windows =>

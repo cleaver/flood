@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Flood
+Comment=A calm, local-first RSS reader
+Exec=flood
+Icon=ca.cleaver.flood
+Terminal=false
+Categories=Network;News;
+StartupWMClass=ca.cleaver.flood
